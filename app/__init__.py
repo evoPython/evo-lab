@@ -11,10 +11,12 @@ def create_app():
 
     # Import blueprints
     from app.portfolio.routes import portfolio
+    from app.dashboard.routes import dashboard
 
 
     # Register blueprints
     app.register_blueprint(portfolio)
+    app.register_blueprint(dashboard)
 
 
     return app

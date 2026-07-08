@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+<h1>
+Dashboard
+</h1>
+
+
+<ul>
+
+<li>
+CPU:
+{{stats.cpu}}%
+</li>
+
+<li>
+RAM:
+{{stats.ram}}%
+</li>
+
+<li>
+Battery:
+{{stats.battery}}%
+</li>
+
+</ul>
+
+
+{% endblock %}

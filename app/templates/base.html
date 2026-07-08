@@ -2,25 +2,26 @@
 <html>
 
 <head>
-    <title>Evo</title>
+    <title>{% block title %}Evo{% endblock %}</title>
 
-    <link 
-    rel="stylesheet"
+    <link rel="stylesheet"
     href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
-
 <body>
 
-<h1>🎉 Evo Server</h1>
+<nav>
+    <a href="/">Home</a>
+    <a href="/dashboard">Dashboard</a>
+</nav>
 
-<p>
-    Flask modular structure is working!
-</p>
 
-<p>
-    Accessed successfully.
-</p>
+<main>
+
+{% block content %}
+{% endblock %}
+
+</main>
 
 
 </body>
