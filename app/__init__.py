@@ -1,0 +1,20 @@
+from flask import Flask
+from config import Config
+
+
+def create_app():
+
+    app = Flask(__name__)
+
+    app.config.from_object(Config)
+
+
+    # Import blueprints
+    from app.portfolio.routes import portfolio
+
+
+    # Register blueprints
+    app.register_blueprint(portfolio)
+
+
+    return app
