@@ -3,29 +3,43 @@
 
 {% block content %}
 
+
+{% if personal %}
+
 <h1>
-Dashboard
+Welcome back!
 </h1>
+
+<p>
+Private dashboard enabled.
+</p>
 
 
 <ul>
-
-<li>
-CPU:
-{{stats.cpu}}%
-</li>
-
-<li>
-RAM:
-{{stats.ram}}%
-</li>
-
-<li>
-Battery:
-{{stats.battery}}%
-</li>
-
+<li>Battery</li>
+<li>CPU</li>
+<li>Controls</li>
+<li>Vault</li>
 </ul>
+
+
+{% else %}
+
+
+<h1>
+Dashboard Preview
+</h1>
+
+<p>
+Public view.
+</p>
+
+<p>
+Pair your device to access private features.
+</p>
+
+
+{% endif %}
 
 
 {% endblock %}

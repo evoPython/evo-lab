@@ -1,5 +1,11 @@
-from flask import Blueprint, render_template
-from .system import get_system_stats
+from flask import (
+    Blueprint,
+    render_template,
+    make_response,
+    current_app
+)
+
+from app.core.security import is_personal_device
 
 
 dashboard = Blueprint(
@@ -12,9 +18,30 @@ dashboard = Blueprint(
 @dashboard.route("/")
 def index():
 
-    stats = get_system_stats()
+    personal = is_personal_device()
 
     return render_template(
         "dashboard.html",
-        stats=stats
+        personal=personal
     )
+# ------------------------------------------------ 
+# UNCOMMENT AND CONNECT TO /dashboard/pair TO PAIR 
+# ------------------------------------------------
+# @dashboard.route("/pair")
+# def pair():
+#
+#     response = make_response(
+#         """
+#         Device successfully paired.
+#         You can close this page.
+#         """
+#     )
+#
+#     response.set_cookie(
+#         "evo_device",
+#         current_app.config["DEVICE_TOKEN"],
+#         httponly=True,
+#         samesite="Lax"
+#     )
+#
+#     return response
