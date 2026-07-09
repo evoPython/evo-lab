@@ -27,12 +27,14 @@ def create_app():
     from app.dashboard.routes import dashboard
     from app.controls.routes import controls
     from app.tools.routes import tools
+    from app.niri.routes import niri
 
     # Register blueprints
     app.register_blueprint(portfolio)
     app.register_blueprint(dashboard)
     app.register_blueprint(controls)
     app.register_blueprint(tools)
+    app.register_blueprint(niri)
 
     # Lets templates conditionally show private nav links (Controls,
     # Tools, ...) without every route having to pass "is_personal"
