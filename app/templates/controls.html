@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Controls{% endblock %}
+
+{% block content %}
+
+<h1>Laptop Controls</h1>
+
+<p id="status"></p>
+
+<p>
+<button onclick="runAction('lock')">Lock Screen</button>
+</p>
+
+<p>
+<button onclick="confirmAction('sleep', 'Suspend the laptop now?')">Sleep</button>
+</p>
+
+<p>
+<button onclick="confirmAction('restart', 'Restart the laptop now?')">Restart</button>
+</p>
+
+<p>
+<button onclick="confirmAction('shutdown', 'Shut down the laptop now?')">Shutdown</button>
+</p>
+
+<script>
+function setStatus(message) {
+    document.getElementById("status").textContent = message;
+}
+
+async function runAction(action) {
+    setStatus("Working...");
+    try {
+        const res = await fetch("/controls/" + action, { method: "POST" });
+        const data = await res.json();
+        setStatus(data.status === "ok" ? "Done." : "Error: " + data.message);
+    } catch (err) {
+        setStatus("Request failed.");
+    }
+}
+
+function confirmAction(action, message) {
+    if (window.confirm(message)) {
+        runAction(action);
+    }
+}
+</script>
+
+{% endblock %}

@@ -14,14 +14,57 @@ Welcome back!
 Private dashboard enabled.
 </p>
 
+<div id="stats">
+<p>CPU: <span id="cpu-percent">-</span>% (<span id="cpu-cores">-</span> cores, <span id="cpu-temp">-</span>)</p>
+<p>RAM: <span id="ram-percent">-</span>% (<span id="ram-used">-</span> / <span id="ram-total">-</span> GB)</p>
+<p>Battery: <span id="battery">-</span></p>
+<p>Disk: <span id="disk-percent">-</span>% (<span id="disk-used">-</span> / <span id="disk-total">-</span> GB)</p>
+<p>Network: <span id="network">-</span></p>
+<p>Data sent/received: <span id="net-io">-</span></p>
+<p>Uptime: <span id="uptime">-</span></p>
+</div>
 
-<ul>
-<li>Battery</li>
-<li>CPU</li>
-<li>Controls</li>
-<li>Vault</li>
-</ul>
+<script>
+async function refreshStats() {
+    try {
+        const res = await fetch("/dashboard/api/stats");
+        if (!res.ok) {
+            return;
+        }
+        const data = await res.json();
 
+        document.getElementById("cpu-percent").textContent = data.cpu.percent;
+        document.getElementById("cpu-cores").textContent = data.cpu.cores;
+        document.getElementById("cpu-temp").textContent =
+            data.cpu.temperature !== null ? data.cpu.temperature.toFixed(1) + " C" : "N/A";
+
+        document.getElementById("ram-percent").textContent = data.ram.percent;
+        document.getElementById("ram-used").textContent = data.ram.used_gb;
+        document.getElementById("ram-total").textContent = data.ram.total_gb;
+
+        document.getElementById("battery").textContent = data.battery
+            ? data.battery.percent + "% " + (data.battery.charging ? "(charging)" : "(on battery)")
+            : "No battery detected";
+
+        document.getElementById("disk-percent").textContent = data.disk.percent;
+        document.getElementById("disk-used").textContent = data.disk.used_gb;
+        document.getElementById("disk-total").textContent = data.disk.total_gb;
+
+        const interfaces = data.network.interfaces;
+        const ifaceText = Object.entries(interfaces).map(([name, ip]) => name + ": " + ip).join(", ");
+        document.getElementById("network").textContent = ifaceText || "No active interfaces";
+        document.getElementById("net-io").textContent =
+            data.network.sent_mb + " MB sent / " + data.network.recv_mb + " MB received";
+
+        document.getElementById("uptime").textContent = data.uptime;
+    } catch (err) {
+        console.error("Failed to refresh dashboard stats", err);
+    }
+}
+
+refreshStats();
+setInterval(refreshStats, 3000);
+</script>
 
 {% else %}
 

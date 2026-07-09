@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}File Transfer{% endblock %}
+
+{% block content %}
+
+<h1>File Transfer</h1>
+
+{% if error %}
+<p>Error: {{ error }}</p>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data">
+<input type="file" name="file">
+<button type="submit">Upload</button>
+</form>
+
+<h2>Files on laptop</h2>
+
+<ul>
+{% for f in files %}
+<li>{{ f }} - <a href="/tools/files/download/{{ f }}">Download</a></li>
+{% else %}
+<li>No files uploaded yet.</li>
+{% endfor %}
+</ul>
+
+<p><a href="/tools">Back to tools</a></p>
+
+{% endblock %}

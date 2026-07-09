@@ -13,6 +13,10 @@
 <nav>
     <a href="/">Home</a>
     <a href="/dashboard">Dashboard</a>
+    {% if is_personal %}
+    <a href="/controls">Controls</a>
+    <a href="/tools">Tools</a>
+    {% endif %}
 </nav>
 
 

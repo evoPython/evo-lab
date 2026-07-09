@@ -2,3 +2,4 @@ flask
 psutil
 werkzeug
 python-dotenv
+pyperclip
