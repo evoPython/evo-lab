@@ -6,6 +6,7 @@ import tempfile
 from flask import Blueprint, render_template, jsonify, request, send_file
 
 from app.core.security import require_personal_device
+from app.core.notify import notify
 from app.niri import client
 
 
@@ -38,7 +39,9 @@ def api_action():
             data.get("action"),
             window_id=data.get("window_id"),
             workspace_idx=data.get("workspace_idx"),
+            value=data.get("value"),
         )
+        notify("Remote", f"Niri: {data.get('action')}")
         return jsonify({"status": "ok"})
     except (client.NiriError, TypeError, ValueError) as exc:
         return jsonify({"status": "error", "message": str(exc)}), 400

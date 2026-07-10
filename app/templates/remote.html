@@ -1,0 +1,507 @@
+{% extends "base.html" %}
+
+{% block title %}Remote Access{% endblock %}
+
+{% block content %}
+
+<h1>Remote Access</h1>
+<p id="status"></p>
+
+<h2>System Controls</h2>
+<button onclick="runAction('/controls/lock')">Lock Screen</button>
+<button onclick="confirmRun('/controls/sleep', 'Suspend the laptop now?')">Sleep</button>
+<button onclick="confirmRun('/controls/restart', 'Restart the laptop now?')">Restart</button>
+<button onclick="confirmRun('/controls/shutdown', 'Shut down the laptop now?')">Shutdown</button>
+
+<h2>Volume</h2>
+<p id="volume-status">-</p>
+<button onclick="runAction('/controls/volume/down')">Vol -</button>
+<button onclick="runAction('/controls/volume/up')">Vol +</button>
+<button onclick="runAction('/controls/volume/mute')">Mute/Unmute</button>
+
+<h2>Brightness</h2>
+<p id="brightness-status">-</p>
+<button onclick="runAction('/controls/brightness/down'); setTimeout(loadBrightness,300)">Dim</button>
+<button onclick="runAction('/controls/brightness/up'); setTimeout(loadBrightness,300)">Brighten</button>
+
+<h2>Media Playback</h2>
+<button onclick="runAction('/controls/media/prev')">Prev</button>
+<button onclick="runAction('/controls/media/playpause')">Play/Pause</button>
+<button onclick="runAction('/controls/media/next')">Next</button>
+
+<h2>Launch App</h2>
+<input type="text" id="app-search" placeholder="type to filter..." oninput="filterApps()" style="width:250px;">
+<ul id="app-list"></ul>
+
+<h2>Live Camera / Mic (to laptop)</h2>
+<p id="stream-status">Camera: off | Mic: off</p>
+<button id="camera-toggle" onclick="toggleCamera()">Turn camera on</button>
+<button id="mic-toggle" onclick="toggleMic()">Turn mic on</button>
+<br>
+<video id="local-preview" autoplay muted playsinline style="max-width:200px; display:none;"></video>
+
+<h2>Laptop Camera / Mic (to phone)</h2>
+<button id="laptop-cam-toggle" onclick="toggleLaptopCamera()">Show laptop camera</button>
+<button id="laptop-mic-toggle" onclick="toggleLaptopMic()">Play laptop mic</button>
+<div><img id="laptop-cam-img" style="max-width:300px; display:none;"></div>
+<audio id="laptop-mic-audio" controls style="display:none;"></audio>
+
+<h2>Screen</h2>
+<label><input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()"> Auto-refresh screenshot every 2s</label>
+<div id="screen-wrap" style="position:relative; display:inline-block;">
+  <img id="screenshot" src="/niri/screenshot" style="max-width:500px; display:block;">
+  <div id="viewport-outline" style="position:absolute; border:2px solid red; pointer-events:none;"></div>
+</div>
+<p><button onclick="refreshScreenshot()">Refresh screenshot</button></p>
+
+<h2>Workspaces</h2>
+<p id="overview-state"></p>
+<div id="workspaces" style="display:flex; gap:20px;"></div>
+
+<div id="ctx-menu" style="position:fixed; display:none; background:white; border:1px solid black; z-index:100; min-width:160px;"></div>
+
+<script>
+const SCALE = 0.15;
+let autoRefreshTimer = null;
+
+function setStatus(msg) { document.getElementById("status").textContent = msg; }
+
+async function postJSON(url, body) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body || {}),
+  });
+  return res.json();
+}
+
+async function runAction(url, body) {
+  setStatus("Working...");
+  try {
+    const data = await postJSON(url, body);
+    setStatus(data.status === "ok" ? "Done." : "Error: " + data.message);
+    loadState();
+    loadVolume();
+  } catch (e) {
+    setStatus("Request failed.");
+  }
+}
+
+function confirmRun(url, message) {
+  if (window.confirm(message)) runAction(url);
+}
+
+// --- Volume ---
+async function loadVolume() {
+  try {
+    const res = await fetch("/controls/volume/status");
+    const data = await res.json();
+    document.getElementById("volume-status").textContent = data.error
+      ? "Volume: " + data.error
+      : "Volume: " + data.percent + "%" + (data.muted ? " (muted)" : "");
+  } catch (e) {}
+}
+
+// --- Brightness ---
+async function loadBrightness() {
+  try {
+    const res = await fetch("/controls/brightness/status");
+    const data = await res.json();
+    document.getElementById("brightness-status").textContent = data.error
+      ? "Brightness: " + data.error
+      : "Brightness: " + data.percent + "%";
+  } catch (e) {}
+}
+let allApps = [];
+async function loadApps() {
+  try {
+    const res = await fetch("/launcher/api/apps");
+    allApps = await res.json();
+    filterApps();
+  } catch (e) {}
+}
+
+function filterApps() {
+  const q = document.getElementById("app-search").value.toLowerCase();
+  const list = document.getElementById("app-list");
+  list.innerHTML = "";
+  allApps
+    .filter(a => a.name.toLowerCase().includes(q))
+    .slice(0, 30)
+    .forEach(a => {
+      const li = document.createElement("li");
+      li.textContent = a.name;
+      li.style.cursor = "pointer";
+      li.onclick = () => launchApp(a.id);
+      list.appendChild(li);
+    });
+}
+
+async function launchApp(id) {
+  setStatus("Launching...");
+  const data = await postJSON("/launcher/api/launch", {id});
+  setStatus(data.status === "ok" ? "Launched " + data.name : "Error: " + data.message);
+}
+
+// --- Live Camera / Mic streaming ---
+let camStream = null, camInterval = null, camOn = false;
+let micStream = null, micRecorder = null, micOn = false;
+
+function updateStreamStatus() {
+  document.getElementById("stream-status").textContent =
+    "Camera: " + (camOn ? "on" : "off") + " | Mic: " + (micOn ? "on" : "off");
+  document.getElementById("camera-toggle").textContent = camOn ? "Turn camera off" : "Turn camera on";
+  document.getElementById("mic-toggle").textContent = micOn ? "Turn mic off" : "Turn mic on";
+}
+
+async function toggleCamera() {
+  if (!camOn) {
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({video: true});
+    } catch (e) { setStatus("Camera access denied."); return; }
+    const preview = document.getElementById("local-preview");
+    preview.srcObject = camStream;
+    preview.style.display = "block";
+
+    const canvas = document.createElement("canvas");
+    const videoTrack = camStream.getVideoTracks()[0];
+    const settings = videoTrack.getSettings();
+    canvas.width = settings.width || 640;
+    canvas.height = settings.height || 480;
+    const ctx = canvas.getContext("2d");
+
+    await postJSON("/media/stream/camera/start", {});
+    let frameInFlight = false;
+    camInterval = setInterval(() => {
+      if (frameInFlight) return; // don't queue up requests if the last one hasn't landed
+      ctx.drawImage(preview, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        frameInFlight = true;
+        fetch("/media/stream/frame", {
+          method: "POST",
+          headers: {"Content-Type": "image/jpeg"},
+          body: blob,
+        }).finally(() => { frameInFlight = false; });
+      }, "image/jpeg", 0.6);
+    }, 150);
+    camOn = true;
+  } else {
+    clearInterval(camInterval);
+    camStream.getTracks().forEach(t => t.stop());
+    document.getElementById("local-preview").style.display = "none";
+    await postJSON("/media/stream/camera/stop", {});
+    camOn = false;
+  }
+  updateStreamStatus();
+}
+
+async function toggleMic() {
+  if (!micOn) {
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({audio: true});
+    } catch (e) { setStatus("Mic access denied."); return; }
+    await postJSON("/media/stream/audio/start", {});
+    micRecorder = new MediaRecorder(micStream, {mimeType: "audio/webm;codecs=opus"});
+    micRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        e.data.arrayBuffer().then(buf => {
+          fetch("/media/stream/audio/chunk", {method: "POST", body: buf});
+        });
+      }
+    };
+    micRecorder.start(250);
+    micOn = true;
+  } else {
+    micRecorder.stop();
+    micStream.getTracks().forEach(t => t.stop());
+    await postJSON("/media/stream/audio/stop", {});
+    micOn = false;
+  }
+  updateStreamStatus();
+}
+
+// --- Laptop -> phone camera/mic ---
+let laptopCamOn = false, laptopMicOn = false;
+
+async function toggleLaptopCamera() {
+  const img = document.getElementById("laptop-cam-img");
+  laptopCamOn = !laptopCamOn;
+  if (laptopCamOn) {
+    img.src = "/media/laptop/camera/stream?t=" + Date.now();
+    img.style.display = "block";
+  } else {
+    img.src = "";
+    img.style.display = "none";
+    await postJSON("/media/laptop/camera/stop", {});
+  }
+  document.getElementById("laptop-cam-toggle").textContent =
+    laptopCamOn ? "Hide laptop camera" : "Show laptop camera";
+}
+
+async function toggleLaptopMic() {
+  const audio = document.getElementById("laptop-mic-audio");
+  laptopMicOn = !laptopMicOn;
+  if (laptopMicOn) {
+    audio.src = "/media/laptop/mic/stream?t=" + Date.now();
+    audio.style.display = "block";
+    audio.play();
+  } else {
+    audio.pause();
+    audio.src = "";
+    audio.style.display = "none";
+    await postJSON("/media/laptop/mic/stop", {});
+  }
+  document.getElementById("laptop-mic-toggle").textContent =
+    laptopMicOn ? "Stop laptop mic" : "Play laptop mic";
+}
+
+// --- Screenshot ---
+function refreshScreenshot() {
+  document.getElementById("screenshot").src = "/niri/screenshot?t=" + Date.now();
+}
+
+function toggleAutoRefresh() {
+  const on = document.getElementById("auto-refresh").checked;
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer = on ? setInterval(refreshScreenshot, 2000) : null;
+}
+
+function updateViewportOutline(outputs) {
+  const output = Object.values(outputs)[0];
+  const img = document.getElementById("screenshot");
+  const outline = document.getElementById("viewport-outline");
+  if (!output || !img.naturalWidth) { outline.style.display = "none"; return; }
+  const scale = img.clientWidth / img.naturalWidth;
+  outline.style.left = "0px";
+  outline.style.top = "0px";
+  outline.style.width = (output.logical.width * scale) + "px";
+  outline.style.height = (output.logical.height * scale) + "px";
+  outline.style.display = "block";
+}
+
+// --- Context menu (right-click or long-press-without-moving) ---
+function showCtxMenu(x, y, win) {
+  const menu = document.getElementById("ctx-menu");
+  menu.innerHTML = "";
+  const items = [
+    ["Focus", () => runAction("/niri/api/action", {action: "focus-window", window_id: win.id})],
+    ["Fullscreen", () => runAction("/niri/api/action", {action: "fullscreen-window", window_id: win.id})],
+    ["Maximize", () => runAction("/niri/api/action", {action: "maximize-column", window_id: win.id})],
+    ["Close", () => runAction("/niri/api/action", {action: "close-window", window_id: win.id})],
+  ];
+  ["25%", "33%", "50%", "66%", "75%", "100%"].forEach(w => {
+    items.push(["Width " + w, () => runAction("/niri/api/action",
+      {action: "set-column-width", window_id: win.id, value: w})]);
+  });
+  items.forEach(([label, fn]) => {
+    const btn = document.createElement("div");
+    btn.textContent = label;
+    btn.style.cursor = "pointer";
+    btn.style.padding = "12px 16px";
+    btn.style.fontSize = "16px";
+    btn.style.touchAction = "manipulation";
+    btn.addEventListener("pointerup", (e) => {
+      e.stopPropagation();
+      fn();
+      menu.style.display = "none";
+    });
+    menu.appendChild(btn);
+  });
+  // Clamp so the menu doesn't render off-screen on a small phone.
+  const menuW = 160, menuH = items.length * 44;
+  menu.style.left = Math.min(x, window.innerWidth - menuW) + "px";
+  menu.style.top = Math.min(y, window.innerHeight - menuH) + "px";
+  menu.style.display = "block";
+}
+
+document.addEventListener("pointerdown", (e) => {
+  if (!e.target.closest("#ctx-menu")) document.getElementById("ctx-menu").style.display = "none";
+});
+
+// --- Windows / workspaces: unified pointer-based tap / long-press / drag ---
+const DRAG_THRESHOLD = 12;
+const PRESS_MS = 500;
+let ptrState = null; // {win, box, startX, startY, dragging, ghost, pressTimer, pressFired}
+
+function clearPtrPress() {
+  if (ptrState && ptrState.pressTimer) {
+    clearTimeout(ptrState.pressTimer);
+    ptrState.pressTimer = null;
+  }
+}
+
+function endPtrDrag() {
+  if (ptrState) {
+    if (ptrState.ghost) ptrState.ghost.remove();
+    if (ptrState.box) ptrState.box.style.opacity = "";
+  }
+  ptrState = null;
+}
+
+function findDropTarget(x, y) {
+  const el = document.elementFromPoint(x, y);
+  if (!el) return null;
+  const winEl = el.closest("[data-winid]");
+  if (winEl) return {kind: "window", el: winEl};
+  const colEl = el.closest("[data-wsidx]");
+  if (colEl) return {kind: "workspace", el: colEl};
+  return null;
+}
+
+function finishPtrDrag(x, y, srcWin) {
+  const target = findDropTarget(x, y);
+  if (!target) return;
+
+  if (target.kind === "window") {
+    const targetId = parseInt(target.el.dataset.winid);
+    if (targetId === srcWin.id) return;
+    const targetWsid = parseInt(target.el.dataset.wsid);
+    const targetWsidx = parseInt(target.el.dataset.wsidx);
+    const targetOrder = parseFloat(target.el.dataset.order);
+    if (targetWsid === srcWin.workspace_id) {
+      const action = srcWin.layout.pos_in_scrolling_layout[0] > targetOrder
+        ? "move-column-left" : "move-column-right";
+      runAction("/niri/api/action", {action, window_id: srcWin.id});
+    } else {
+      runAction("/niri/api/action", {action: "move-window-to-workspace",
+        window_id: srcWin.id, workspace_idx: targetWsidx});
+    }
+  } else {
+    const targetWsidx = parseInt(target.el.dataset.wsidx);
+    runAction("/niri/api/action", {action: "move-window-to-workspace",
+      window_id: srcWin.id, workspace_idx: targetWsidx});
+  }
+}
+
+function makeWindowBox(win, wsIdx) {
+  const box = document.createElement("div");
+  box.textContent = (win.app_id || "?") + ": " + (win.title || "");
+  box.title = "id " + win.id;
+  box.dataset.winid = win.id;
+  box.dataset.wsid = win.workspace_id;
+  box.dataset.wsidx = wsIdx;
+  box.dataset.order = win.layout.pos_in_scrolling_layout[0];
+  box.style.border = win.is_focused ? "2px solid green" : "1px solid black";
+  box.style.width = Math.max(60, win.layout.tile_size[0] * SCALE) + "px";
+  box.style.height = Math.max(44, win.layout.tile_size[1] * SCALE) + "px";
+  box.style.overflow = "hidden";
+  box.style.fontSize = "12px";
+  box.style.padding = "4px";
+  box.style.background = win.is_floating ? "#eee" : "#fff";
+  box.style.touchAction = "none";
+  box.style.userSelect = "none";
+  box.style.webkitUserSelect = "none";
+  box.style.webkitTouchCallout = "none";
+
+  box.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    box.setPointerCapture(e.pointerId);
+    ptrState = {
+      win, box, startX: e.clientX, startY: e.clientY,
+      dragging: false, ghost: null, pressFired: false,
+      pressTimer: setTimeout(() => {
+        if (ptrState) {
+          ptrState.pressFired = true;
+          showCtxMenu(e.clientX, e.clientY, win);
+        }
+      }, PRESS_MS),
+    };
+  });
+
+  box.addEventListener("pointermove", (e) => {
+    if (!ptrState || ptrState.win.id !== win.id) return;
+    const dx = e.clientX - ptrState.startX;
+    const dy = e.clientY - ptrState.startY;
+    if (!ptrState.dragging && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+      clearPtrPress();
+      ptrState.dragging = true;
+      const ghost = box.cloneNode(true);
+      ghost.style.position = "fixed";
+      ghost.style.opacity = "0.7";
+      ghost.style.pointerEvents = "none";
+      ghost.style.zIndex = "1000";
+      document.body.appendChild(ghost);
+      ptrState.ghost = ghost;
+      box.style.opacity = "0.3";
+    }
+    if (ptrState.dragging && ptrState.ghost) {
+      ptrState.ghost.style.left = (e.clientX - 20) + "px";
+      ptrState.ghost.style.top = (e.clientY - 20) + "px";
+    }
+  });
+
+  box.addEventListener("pointerup", (e) => {
+    clearPtrPress();
+    if (ptrState && ptrState.dragging) {
+      finishPtrDrag(e.clientX, e.clientY, win);
+    } else if (ptrState && !ptrState.pressFired) {
+      runAction("/niri/api/action", {action: "focus-window", window_id: win.id});
+    }
+    endPtrDrag();
+  });
+
+  box.addEventListener("pointercancel", () => { clearPtrPress(); endPtrDrag(); });
+
+  box.addEventListener("dblclick", () => runAction("/niri/api/action", {action: "fullscreen-window", window_id: win.id}));
+
+  return box;
+}
+
+function makeWorkspaceColumn(ws, windows) {
+  const col = document.createElement("div");
+  col.dataset.wsidx = ws.idx;
+  col.style.border = ws.is_active ? "2px solid blue" : "1px solid gray";
+  col.style.minWidth = "220px";
+  col.style.minHeight = "300px";
+  col.style.padding = "6px";
+
+  const header = document.createElement("div");
+  header.textContent = "Workspace " + ws.idx + (ws.is_focused ? " (focused)" : "");
+  col.appendChild(header);
+
+  const winWrap = document.createElement("div");
+  winWrap.style.display = "flex";
+  winWrap.style.flexWrap = "wrap";
+  winWrap.style.gap = "4px";
+  winWrap.style.marginTop = "6px";
+
+  windows
+    .filter(w => w.workspace_id === ws.id)
+    .sort((a, b) => a.layout.pos_in_scrolling_layout[0] - b.layout.pos_in_scrolling_layout[0])
+    .forEach(w => winWrap.appendChild(makeWindowBox(w, ws.idx)));
+
+  col.appendChild(winWrap);
+
+  return col;
+}
+
+async function loadState() {
+  try {
+    const res = await fetch("/niri/api/state");
+    const data = await res.json();
+    if (data.error) { setStatus("Error: " + data.error); return; }
+
+    document.getElementById("overview-state").textContent =
+      "Overview: " + (data.overview.is_open ? "open" : "closed");
+
+    const wsDiv = document.getElementById("workspaces");
+    wsDiv.innerHTML = "";
+    data.workspaces.sort((a, b) => a.idx - b.idx)
+      .forEach(ws => wsDiv.appendChild(makeWorkspaceColumn(ws, data.windows)));
+
+    updateViewportOutline(data.outputs);
+  } catch (e) {
+    setStatus("Failed to load niri state.");
+  }
+}
+
+document.getElementById("screenshot").addEventListener("load", () => updateViewportOutline);
+loadState();
+loadVolume();
+loadBrightness();
+loadApps();
+setInterval(loadState, 4000);
+</script>
+
+{% endblock %}

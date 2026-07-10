@@ -12,13 +12,19 @@ class Config:
         "SECRET_KEY"
     )
 
-    DEVICE_TOKEN = os.getenv(
-        "DEVICE_TOKEN"
+    # Root login password (single shared secret, unlocks remote-access
+    # features: controls, tools, niri, media, launcher).
+    ROOT_PASSWORD = os.getenv(
+        "ROOT_PASSWORD"
+    )
+
+    # SQLite db for personal accounts, chat, and call signaling.
+    DB_PATH = os.getenv(
+        "EVO_DB_PATH",
+        os.path.join(BASE_DIR, "data", "evo.db")
     )
 
     # Where uploaded files from the file transfer tool are stored.
-    # Kept out of the source tree by default (data/uploads) and
-    # overridable via .env for a custom path (e.g. an external drive).
     UPLOAD_DIR = os.getenv(
         "EVO_UPLOAD_DIR",
         os.path.join(BASE_DIR, "data", "uploads")

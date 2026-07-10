@@ -14,10 +14,26 @@
     <a href="/">Home</a>
     <a href="/dashboard">Dashboard</a>
     {% if is_personal %}
-    <a href="/controls">Controls</a>
     <a href="/tools">Tools</a>
-    <a href="/niri">Niri</a>
+    <a href="/remote">Remote Access</a>
     {% endif %}
+    {% if is_logged_in %}
+    <a href="/cross-remote">Cross-Remote</a>
+    {% endif %}
+
+    <span style="float:right;">
+    {% if is_personal %}
+    <a href="/auth/root/logout">Root logout</a>
+    {% else %}
+    <a href="/auth/root">Root login</a>
+    {% endif %}
+    |
+    {% if is_logged_in %}
+    {{ current_user }} - <a href="/auth/logout">Logout</a>
+    {% else %}
+    <a href="/auth/login">Login / Register</a>
+    {% endif %}
+    </span>
 </nav>
 
 

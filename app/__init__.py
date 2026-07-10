@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 from flask import Flask
 from config import Config
@@ -10,6 +11,7 @@ def create_app():
     app = Flask(__name__)
 
     app.config.from_object(Config)
+    app.permanent_session_lifetime = timedelta(days=30)
 
     app.wsgi_app = ProxyFix(
         app.wsgi_app,
@@ -18,9 +20,12 @@ def create_app():
         x_host=1
     )
 
-    # Make sure the upload directory exists on startup rather than
-    # failing the first time someone uploads a file.
+    # Make sure the upload directory and db directory exist on startup.
     os.makedirs(app.config["UPLOAD_DIR"], exist_ok=True)
+    os.makedirs(os.path.dirname(app.config["DB_PATH"]), exist_ok=True)
+
+    from app.core.db import init_db
+    init_db(app)
 
     # Import blueprints
     from app.portfolio.routes import portfolio
@@ -28,6 +33,11 @@ def create_app():
     from app.controls.routes import controls
     from app.tools.routes import tools
     from app.niri.routes import niri
+    from app.launcher.routes import launcher
+    from app.media.routes import media
+    from app.remote.routes import remote
+    from app.auth.routes import auth
+    from app.cross_remote.routes import cross_remote
 
     # Register blueprints
     app.register_blueprint(portfolio)
@@ -35,13 +45,22 @@ def create_app():
     app.register_blueprint(controls)
     app.register_blueprint(tools)
     app.register_blueprint(niri)
+    app.register_blueprint(launcher)
+    app.register_blueprint(media)
+    app.register_blueprint(remote)
+    app.register_blueprint(auth)
+    app.register_blueprint(cross_remote)
 
-    # Lets templates conditionally show private nav links (Controls,
-    # Tools, ...) without every route having to pass "is_personal"
-    # in explicitly.
+    # Lets templates conditionally show private nav links without
+    # every route having to pass status flags in explicitly.
     @app.context_processor
-    def inject_personal_status():
-        from app.core.security import is_personal_device
-        return dict(is_personal=is_personal_device())
+    def inject_auth_status():
+        from app.core.security import is_personal_device, is_logged_in
+        from flask import session
+        return dict(
+            is_personal=is_personal_device(),
+            is_logged_in=is_logged_in(),
+            current_user=session.get("user_id"),
+        )
 
     return app

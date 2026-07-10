@@ -3,3 +3,4 @@ psutil
 werkzeug
 python-dotenv
 pyperclip
+pyxdg

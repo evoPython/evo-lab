@@ -1,39 +1,41 @@
 from functools import wraps
 
-from flask import request, current_app, abort
+from flask import session, abort
 
 
 def is_personal_device():
-
-    token = request.cookies.get(
-        "evo_device"
-    )
-
-    expected = current_app.config.get("DEVICE_TOKEN")
-
-    if not expected:
-        return False
-
-    return token == expected
+    """
+    Kept as the single gate for laptop-facing "remote access" features
+    (controls, tools, niri, media, launcher). Now backed by the root
+    login session instead of a device-pairing cookie.
+    """
+    return bool(session.get("is_root"))
 
 
 def require_personal_device(view):
-    """
-    Decorator for routes that must never be reachable by public
-    visitors (controls, tools, private APIs, etc).
-
-    Returns 403 instead of rendering/executing anything if the
-    request does not carry a valid evo_device cookie.
-
-    This is intentionally simple for now (single shared token via
-    /dashboard/pair). It is the seam where real per-device auth
-    can be added later without touching every route that uses it.
-    """
-
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not is_personal_device():
             abort(403)
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+def is_logged_in():
+    """Personal account login (username/password), separate from root."""
+    return "user_id" in session
+
+
+def require_login(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not is_logged_in():
+            from flask import redirect, url_for
+            return redirect(url_for("auth.login"))
+        # Keep presence fresh for the cross-remote "who's online" list.
+        from app.auth.users import touch_last_seen
+        touch_last_seen(session["user_id"])
         return view(*args, **kwargs)
 
     return wrapped
