@@ -3,64 +3,100 @@
 {% block title %}Remote Access{% endblock %}
 
 {% block content %}
+<main class="stage" id="stage">
+<div class="rc-shell">
+  <div class="rc-head"><h1>remote</h1></div>
+  <p class="rc-status mono" id="status"></p>
 
-<h1>Remote Access</h1>
-<p id="status"></p>
+  <div class="rc-grid">
 
-<h2>System Controls</h2>
-<button onclick="runAction('/controls/lock')">Lock Screen</button>
-<button onclick="confirmRun('/controls/sleep', 'Suspend the laptop now?')">Sleep</button>
-<button onclick="confirmRun('/controls/restart', 'Restart the laptop now?')">Restart</button>
-<button onclick="confirmRun('/controls/shutdown', 'Shut down the laptop now?')">Shutdown</button>
+    <section class="rc-panel">
+      <h2>System</h2>
+      <div class="rc-btnrow">
+        <button class="btn" onclick="runAction('/controls/lock')">Lock</button>
+        <button class="btn" onclick="confirmRun('/controls/sleep', 'Suspend the laptop now?')">Sleep</button>
+        <button class="btn" onclick="confirmRun('/controls/restart', 'Restart the laptop now?')">Restart</button>
+        <button class="btn" onclick="confirmRun('/controls/shutdown', 'Shut down the laptop now?')">Shutdown</button>
+      </div>
+    </section>
 
-<h2>Volume</h2>
-<p id="volume-status">-</p>
-<button onclick="runAction('/controls/volume/down')">Vol -</button>
-<button onclick="runAction('/controls/volume/up')">Vol +</button>
-<button onclick="runAction('/controls/volume/mute')">Mute/Unmute</button>
+    <section class="rc-panel">
+      <h2>Volume</h2>
+      <p class="rc-panel__value" id="volume-status">-</p>
+      <div class="rc-btnrow">
+        <button class="btn" onclick="runAction('/controls/volume/down')">Vol &minus;</button>
+        <button class="btn" onclick="runAction('/controls/volume/up')">Vol +</button>
+        <button class="btn" onclick="runAction('/controls/volume/mute')">Mute</button>
+      </div>
+    </section>
 
-<h2>Brightness</h2>
-<p id="brightness-status">-</p>
-<button onclick="runAction('/controls/brightness/down'); setTimeout(loadBrightness,300)">Dim</button>
-<button onclick="runAction('/controls/brightness/up'); setTimeout(loadBrightness,300)">Brighten</button>
+    <section class="rc-panel">
+      <h2>Brightness</h2>
+      <p class="rc-panel__value" id="brightness-status">-</p>
+      <div class="rc-btnrow">
+        <button class="btn" onclick="runAction('/controls/brightness/down'); setTimeout(loadBrightness,300)">Dim</button>
+        <button class="btn" onclick="runAction('/controls/brightness/up'); setTimeout(loadBrightness,300)">Brighten</button>
+      </div>
+    </section>
 
-<h2>Media Playback</h2>
-<button onclick="runAction('/controls/media/prev')">Prev</button>
-<button onclick="runAction('/controls/media/playpause')">Play/Pause</button>
-<button onclick="runAction('/controls/media/next')">Next</button>
+    <section class="rc-panel">
+      <h2>Media</h2>
+      <div class="rc-btnrow rc-media-row">
+        <button class="btn" onclick="runAction('/controls/media/prev')">&laquo; Prev</button>
+        <button class="btn" onclick="runAction('/controls/media/playpause')">Play / Pause</button>
+        <button class="btn" onclick="runAction('/controls/media/next')">Next &raquo;</button>
+      </div>
+    </section>
 
-<h2>Launch App</h2>
-<input type="text" id="app-search" placeholder="type to filter..." oninput="filterApps()" style="width:250px;">
-<ul id="app-list"></ul>
+    <section class="rc-panel">
+      <h2>Launch App</h2>
+      <input type="text" id="app-search" class="rc-search" placeholder="type to filter…" oninput="filterApps()">
+      <ul id="app-list" class="rc-applist mono"></ul>
+    </section>
 
-<h2>Live Camera / Mic (to laptop)</h2>
-<p id="stream-status">Camera: off | Mic: off</p>
-<button id="camera-toggle" onclick="toggleCamera()">Turn camera on</button>
-<button id="mic-toggle" onclick="toggleMic()">Turn mic on</button>
-<br>
-<video id="local-preview" autoplay muted playsinline style="max-width:200px; display:none;"></video>
+    <section class="rc-panel">
+      <h2>Live Camera / Mic &rarr; laptop</h2>
+      <p class="rc-panel__value" id="stream-status">Camera: off | Mic: off</p>
+      <div class="rc-btnrow">
+        <button class="btn" id="camera-toggle" onclick="toggleCamera()">Turn camera on</button>
+        <button class="btn" id="mic-toggle" onclick="toggleMic()">Turn mic on</button>
+      </div>
+      <video id="local-preview" autoplay muted playsinline style="display:none; max-width:180px;"></video>
+    </section>
 
-<h2>Laptop Camera / Mic (to phone)</h2>
-<button id="laptop-cam-toggle" onclick="toggleLaptopCamera()">Show laptop camera</button>
-<button id="laptop-mic-toggle" onclick="toggleLaptopMic()">Play laptop mic</button>
-<div><img id="laptop-cam-img" style="max-width:300px; display:none;"></div>
-<audio id="laptop-mic-audio" controls style="display:none;"></audio>
+    <section class="rc-panel rc-panel--span2">
+      <h2>Laptop Camera / Mic &rarr; phone</h2>
+      <div class="rc-btnrow">
+        <button class="btn" id="laptop-cam-toggle" onclick="toggleLaptopCamera()">Show laptop camera</button>
+        <button class="btn" id="laptop-mic-toggle" onclick="toggleLaptopMic()">Play laptop mic</button>
+      </div>
+      <div class="rc-video-row">
+        <img id="laptop-cam-img" style="display:none; max-width:260px;">
+        <audio id="laptop-mic-audio" controls style="display:none;"></audio>
+      </div>
+    </section>
 
-<h2>Screen</h2>
-<label><input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()"> Auto-refresh screenshot every 2s</label>
-<div id="screen-wrap" style="position:relative; display:inline-block;">
-  <img id="screenshot" src="/niri/screenshot" style="max-width:500px; display:block;">
-  <div id="viewport-outline" style="position:absolute; border:2px solid red; pointer-events:none;"></div>
-</div>
-<p><button onclick="refreshScreenshot()">Refresh screenshot</button></p>
+    <section class="rc-panel rc-panel--span3">
+      <h2>Screen</h2>
+      <label class="rc-check"><input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()"> Auto-refresh every 2s</label>
+      <div class="rc-screen-wrap" id="screen-wrap">
+        <img id="screenshot" src="/niri/screenshot">
+        <div id="viewport-outline" class="rc-viewport-outline"></div>
+      </div>
+      <div class="rc-btnrow"><button class="btn" onclick="refreshScreenshot()">Refresh screenshot</button></div>
+    </section>
 
-<h2>Workspaces</h2>
-<p id="overview-state"></p>
-<div id="workspaces" style="display:flex; gap:20px;"></div>
+    <section class="rc-panel rc-panel--span3">
+      <h2>Workspaces</h2>
+      <p class="rc-panel__value" id="overview-state"></p>
+      <div id="workspaces" class="rc-ws-row"></div>
+    </section>
 
-<div id="ctx-menu" style="position:fixed; display:none; background:white; border:1px solid black; z-index:100; min-width:160px;"></div>
+  </div>
 
-<script>
+  <div id="ctx-menu" style="position:fixed; display:none; z-index:100; min-width:160px;"></div>
+
+  <script>
 const SCALE = 0.15;
 let autoRefreshTimer = null;
 
@@ -131,7 +167,6 @@ function filterApps() {
     .forEach(a => {
       const li = document.createElement("li");
       li.textContent = a.name;
-      li.style.cursor = "pointer";
       li.onclick = () => launchApp(a.id);
       list.appendChild(li);
     });
@@ -173,7 +208,7 @@ async function toggleCamera() {
     await postJSON("/media/stream/camera/start", {});
     let frameInFlight = false;
     camInterval = setInterval(() => {
-      if (frameInFlight) return; // don't queue up requests if the last one hasn't landed
+      if (frameInFlight) return;
       ctx.drawImage(preview, 0, 0, canvas.width, canvas.height);
       canvas.toBlob((blob) => {
         if (!blob) return;
@@ -299,7 +334,7 @@ function showCtxMenu(x, y, win) {
     btn.textContent = label;
     btn.style.cursor = "pointer";
     btn.style.padding = "12px 16px";
-    btn.style.fontSize = "16px";
+    btn.style.fontSize = "14px";
     btn.style.touchAction = "manipulation";
     btn.addEventListener("pointerup", (e) => {
       e.stopPropagation();
@@ -308,8 +343,7 @@ function showCtxMenu(x, y, win) {
     });
     menu.appendChild(btn);
   });
-  // Clamp so the menu doesn't render off-screen on a small phone.
-  const menuW = 160, menuH = items.length * 44;
+  const menuW = 160, menuH = items.length * 40;
   menu.style.left = Math.min(x, window.innerWidth - menuW) + "px";
   menu.style.top = Math.min(y, window.innerHeight - menuH) + "px";
   menu.style.display = "block";
@@ -322,7 +356,7 @@ document.addEventListener("pointerdown", (e) => {
 // --- Windows / workspaces: unified pointer-based tap / long-press / drag ---
 const DRAG_THRESHOLD = 12;
 const PRESS_MS = 500;
-let ptrState = null; // {win, box, startX, startY, dragging, ghost, pressTimer, pressFired}
+let ptrState = null;
 
 function clearPtrPress() {
   if (ptrState && ptrState.pressTimer) {
@@ -376,23 +410,15 @@ function finishPtrDrag(x, y, srcWin) {
 
 function makeWindowBox(win, wsIdx) {
   const box = document.createElement("div");
+  box.className = "rc-win-box" + (win.is_focused ? " is-focused" : "") + (win.is_floating ? " is-floating" : "");
   box.textContent = (win.app_id || "?") + ": " + (win.title || "");
   box.title = "id " + win.id;
   box.dataset.winid = win.id;
   box.dataset.wsid = win.workspace_id;
   box.dataset.wsidx = wsIdx;
   box.dataset.order = win.layout.pos_in_scrolling_layout[0];
-  box.style.border = win.is_focused ? "2px solid green" : "1px solid black";
-  box.style.width = Math.max(60, win.layout.tile_size[0] * SCALE) + "px";
-  box.style.height = Math.max(44, win.layout.tile_size[1] * SCALE) + "px";
-  box.style.overflow = "hidden";
-  box.style.fontSize = "12px";
-  box.style.padding = "4px";
-  box.style.background = win.is_floating ? "#eee" : "#fff";
-  box.style.touchAction = "none";
-  box.style.userSelect = "none";
-  box.style.webkitUserSelect = "none";
-  box.style.webkitTouchCallout = "none";
+  box.style.width = Math.max(70, win.layout.tile_size[0] * SCALE) + "px";
+  box.style.height = Math.max(40, win.layout.tile_size[1] * SCALE) + "px";
 
   box.addEventListener("pointerdown", (e) => {
     e.preventDefault();
@@ -450,21 +476,16 @@ function makeWindowBox(win, wsIdx) {
 
 function makeWorkspaceColumn(ws, windows) {
   const col = document.createElement("div");
+  col.className = "rc-ws-col" + (ws.is_active ? " is-active" : "");
   col.dataset.wsidx = ws.idx;
-  col.style.border = ws.is_active ? "2px solid blue" : "1px solid gray";
-  col.style.minWidth = "220px";
-  col.style.minHeight = "300px";
-  col.style.padding = "6px";
 
   const header = document.createElement("div");
-  header.textContent = "Workspace " + ws.idx + (ws.is_focused ? " (focused)" : "");
+  header.className = "rc-ws-col__head mono";
+  header.textContent = "workspace " + ws.idx + (ws.is_focused ? " · focused" : "");
   col.appendChild(header);
 
   const winWrap = document.createElement("div");
-  winWrap.style.display = "flex";
-  winWrap.style.flexWrap = "wrap";
-  winWrap.style.gap = "4px";
-  winWrap.style.marginTop = "6px";
+  winWrap.className = "rc-ws-wins";
 
   windows
     .filter(w => w.workspace_id === ws.id)
@@ -483,7 +504,7 @@ async function loadState() {
     if (data.error) { setStatus("Error: " + data.error); return; }
 
     document.getElementById("overview-state").textContent =
-      "Overview: " + (data.overview.is_open ? "open" : "closed");
+      "overview: " + (data.overview.is_open ? "open" : "closed");
 
     const wsDiv = document.getElementById("workspaces");
     wsDiv.innerHTML = "";
@@ -497,11 +518,12 @@ async function loadState() {
 }
 
 document.getElementById("screenshot").addEventListener("load", () => updateViewportOutline);
-loadState();
+loadApps();
 loadVolume();
 loadBrightness();
-loadApps();
+loadState();
 setInterval(loadState, 4000);
-</script>
-
+  </script>
+</div>
+</main>
 {% endblock %}

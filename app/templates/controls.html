@@ -3,28 +3,29 @@
 {% block title %}Controls{% endblock %}
 
 {% block content %}
+<main class="stage" id="stage">
+<div class="page-shell">
+  <h1>Laptop Controls</h1>
 
-<h1>Laptop Controls</h1>
+  <p id="status"></p>
 
-<p id="status"></p>
+  <p>
+  <button onclick="runAction('lock')">Lock Screen</button>
+  </p>
 
-<p>
-<button onclick="runAction('lock')">Lock Screen</button>
-</p>
+  <p>
+  <button onclick="confirmAction('sleep', 'Suspend the laptop now?')">Sleep</button>
+  </p>
 
-<p>
-<button onclick="confirmAction('sleep', 'Suspend the laptop now?')">Sleep</button>
-</p>
+  <p>
+  <button onclick="confirmAction('restart', 'Restart the laptop now?')">Restart</button>
+  </p>
 
-<p>
-<button onclick="confirmAction('restart', 'Restart the laptop now?')">Restart</button>
-</p>
+  <p>
+  <button onclick="confirmAction('shutdown', 'Shut down the laptop now?')">Shutdown</button>
+  </p>
 
-<p>
-<button onclick="confirmAction('shutdown', 'Shut down the laptop now?')">Shutdown</button>
-</p>
-
-<script>
+  <script>
 function setStatus(message) {
     document.getElementById("status").textContent = message;
 }
@@ -45,6 +46,7 @@ function confirmAction(action, message) {
         runAction(action);
     }
 }
-</script>
-
+  </script>
+</div>
+</main>
 {% endblock %}

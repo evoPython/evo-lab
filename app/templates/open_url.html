@@ -3,22 +3,24 @@
 {% block title %}Open URL{% endblock %}
 
 {% block content %}
+<main class="stage" id="stage">
+<div class="page-shell">
+  <h1>Open URL on Laptop</h1>
 
-<h1>Open URL on Laptop</h1>
+  {% if error %}
+  <p class="error">{{ error }}</p>
+  {% endif %}
 
-{% if error %}
-<p>Error: {{ error }}</p>
-{% endif %}
+  {% if result %}
+  <p>Opened: {{ result }}</p>
+  {% endif %}
 
-{% if result %}
-<p>Opened: {{ result }}</p>
-{% endif %}
+  <form method="post">
+    <input type="text" name="url" placeholder="https://example.com" size="50">
+    <button type="submit" class="btn">Open</button>
+  </form>
 
-<form method="post">
-<input type="text" name="url" placeholder="https://example.com" size="50">
-<button type="submit">Open</button>
-</form>
-
-<p><a href="/tools">Back to tools</a></p>
-
+  <p><a href="/tools">Back to tools</a></p>
+</div>
+</main>
 {% endblock %}

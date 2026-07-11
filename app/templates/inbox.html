@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Inbox{% endblock %}
+
+{% block content %}
+<main class="stage" id="stage">
+<div class="page-shell">
+  <h1 class="mono">inbox</h1>
+  <p class="dim">{{ letters|length }} letter{{ '' if letters|length == 1 else 's' }} total</p>
+
+  {% if letters %}
+  <ul class="letterlist">
+    {% for l in letters %}
+    <li class="letterlist__item">
+      <div class="letterlist__meta mono">
+        <span class="letterlist__from">{{ l.name or 'anonymous' }}</span>
+        <span class="dim">·</span>
+        <span class="letterlist__date dim">{{ l.created_at }}</span>
+        <span class="dim">·</span>
+        <span class="letterlist__ip dim">{{ l.ip }}</span>
+      </div>
+      <p class="letterlist__body">{{ l.body }}</p>
+      <form method="post" action="/letters/{{ l.id }}/delete" class="letterlist__delete" onsubmit="return confirm('delete this letter?');">
+        <button type="submit" class="btn">delete</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="dim">No letters yet.</p>
+  {% endif %}
+</div>
+</main>
+{% endblock %}

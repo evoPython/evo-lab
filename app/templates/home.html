@@ -1,21 +1,427 @@
 {% extends "base.html" %}
 
-
-{% block title %}
-Portfolio
-{% endblock %}
-
+{% block title %}evo.ftp.sh — home{% endblock %}
 
 {% block content %}
 
-<h1>
-Jaino Cabrera
-</h1>
+<div class="workspace">
 
-<p>
-Sample home/hero page.
-<br>
-Developer, Musician, Researcher.
-</p>
+  <nav class="sidenav" aria-label="Sections" role="tablist" aria-orientation="vertical" id="sidenav">
+    <div class="sidenav__indicator" id="sidenavIndicator" aria-hidden="true"></div>
+
+    <button class="sidenav__item" role="tab" id="tab-home" aria-controls="panel-home" aria-selected="true" data-view="home">
+      <span class="sidenav__index mono">00</span>
+      <span class="sidenav__label">home</span>
+    </button>
+    <button class="sidenav__item" role="tab" id="tab-about" aria-controls="panel-about" aria-selected="false" tabindex="-1" data-view="about">
+      <span class="sidenav__index mono">01</span>
+      <span class="sidenav__label">about</span>
+    </button>
+    <button class="sidenav__item" role="tab" id="tab-projects" aria-controls="panel-projects" aria-selected="false" tabindex="-1" data-view="projects">
+      <span class="sidenav__index mono">02</span>
+      <span class="sidenav__label">projects</span>
+    </button>
+    <button class="sidenav__item" role="tab" id="tab-server" aria-controls="panel-server" aria-selected="false" tabindex="-1" data-view="server">
+      <span class="sidenav__index mono">03</span>
+      <span class="sidenav__label">server</span>
+    </button>
+    <button class="sidenav__item" role="tab" id="tab-music" aria-controls="panel-music" aria-selected="false" tabindex="-1" data-view="music">
+      <span class="sidenav__index mono">04</span>
+      <span class="sidenav__label">music</span>
+    </button>
+    <button class="sidenav__item" role="tab" id="tab-letter" aria-controls="panel-letter" aria-selected="false" tabindex="-1" data-view="letter">
+      <span class="sidenav__index mono">05</span>
+      <span class="sidenav__label">letter</span>
+    </button>
+    <button class="sidenav__item" role="tab" id="tab-links" aria-controls="panel-links" aria-selected="false" tabindex="-1" data-view="links">
+      <span class="sidenav__index mono">06</span>
+      <span class="sidenav__label">links</span>
+    </button>
+
+    <div class="sidenav__foot">
+      <a class="sidenav__tools mono" href="/auth/login">
+        <span>login</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="view-stage">
+
+      <section class="tabpanel is-active" role="tabpanel" id="panel-home" aria-labelledby="tab-home" data-view="home">
+        <div class="hero">
+          <div class="hero__prompt mono">
+            <span class="hero__caret" aria-hidden="true">&gt;</span>
+            <span class="hero__typed" id="heroTyped"></span><span class="cursor" aria-hidden="true"></span>
+          </div>
+
+          <h1 class="hero__title mono">evo<span class="accent-dim">.ftp.sh</span></h1>
+
+          <ul class="hero__tags mono stagger" aria-label="Roles">
+            <li class="stagger-item">student</li>
+            <li class="stagger-item">programmer</li>
+            <li class="stagger-item">musician</li>
+          </ul>
+
+          <p class="hero__line stagger-item">i build things ig</p>
+        </div>
+
+        <div class="glance mono stagger" aria-label="Quick navigation">
+          <button class="glance__item stagger-item" data-goto="about">
+            <span class="glance__idx">01</span>
+            <span class="glance__name">about</span>
+            <span class="glance__desc">who's running this thing</span>
+          </button>
+          <button class="glance__item stagger-item" data-goto="projects">
+            <span class="glance__idx">02</span>
+            <span class="glance__name">projects</span>
+            <span class="glance__desc">4 directories</span>
+          </button>
+          <button class="glance__item stagger-item" data-goto="server">
+            <span class="glance__idx">03</span>
+            <span class="glance__name">server</span>
+            <span class="glance__desc">status: online</span>
+          </button>
+          <button class="glance__item stagger-item" data-goto="music">
+            <span class="glance__idx">04</span>
+            <span class="glance__name">music</span>
+            <span class="glance__desc">5 sketches</span>
+          </button>
+          <button class="glance__item stagger-item" data-goto="letter">
+            <span class="glance__idx">05</span>
+            <span class="glance__name">letter</span>
+            <span class="glance__desc">write me a note</span>
+          </button>
+          <button class="glance__item stagger-item" data-goto="links">
+            <span class="glance__idx">06</span>
+            <span class="glance__name">links</span>
+            <span class="glance__desc">git, discord, mail</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="tabpanel" role="tabpanel" id="panel-about" aria-labelledby="tab-about" data-view="about" inert>
+        <header class="view-head">
+          <span class="view-head__index mono">01</span>
+          <h2 class="view-head__title mono">about</h2>
+        </header>
+
+        <div class="about-id stagger">
+          <div class="about-id__avatar stagger-item" aria-hidden="true">
+            <img src="{{ url_for ('static', filename='images/pfp.png') }}", alt="pfp">
+          </div>
+          <div class="about-id__info stagger-item">
+            <p class="about-id__name mono">evo</p>
+            <p class="about-id__status mono">
+              <span class="about-id__status-label dim">current status</span>
+              <span class="about-id__status-text" id="statusText">idle</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="split split--about">
+          <div class="split__main stagger">
+            <p class="stagger-item">
+              ⚠️ This website isn't finished.
+            </p>
+            <p class="stagger-item">
+            This is the front page for my homelab, where I host a variety of useful tools for myself.
+            </p>
+          </div>
+
+          <aside class="split__aside stagger">
+            <dl class="factlist mono stagger-item">
+              <div><dt>based in</dt><dd>the philippines</dd></div>
+              <div><dt>writes</dt><dd>python, js, rust</dd></div>
+              <div><dt>listens to</dt><dd>literally everything</dd></div>
+            </dl>
+          </aside>
+        </div>
+      </section>
+
+      <section class="tabpanel" role="tabpanel" id="panel-projects" aria-labelledby="tab-projects" data-view="projects" inert>
+        <header class="view-head">
+          <span class="view-head__index mono">02</span>
+          <h2 class="view-head__title mono">projects</h2>
+          <span class="view-head__hint mono">tap to preview</span>
+        </header>
+
+        <div class="filepane">
+          <ul class="filelist mono" id="fileList" role="listbox" aria-label="Projects">
+            <li>
+              <button class="filelist__item is-selected" role="option" aria-selected="true" data-project="evo-lab">
+                <span class="filelist__icon" aria-hidden="true">▸</span>
+                <span class="filelist__name">evo-lab<span class="dim">/</span></span>
+                <span class="filelist__tag">web</span>
+              </button>
+            </li>
+            <li>
+              <button class="filelist__item" role="option" aria-selected="false" data-project="carwash-pos">
+                <span class="filelist__icon" aria-hidden="true">▸</span>
+                <span class="filelist__name">carwash-pos<span class="dim">/</span></span>
+                <span class="filelist__tag">web</span>
+              </button>
+            </li>
+            <li>
+              <button class="filelist__item" role="option" aria-selected="false" data-project="riffmd">
+                <span class="filelist__icon" aria-hidden="true">▸</span>
+                <span class="filelist__name">riffmd<span class="dim">/</span></span>
+                <span class="filelist__tag">cli</span>
+              </button>
+            </li>
+            <li>
+              <button class="filelist__item" role="option" aria-selected="false" data-project="vault">
+                <span class="filelist__icon" aria-hidden="true">▸</span>
+                <span class="filelist__name">vault<span class="dim">/</span></span>
+                <span class="filelist__tag">writing</span>
+              </button>
+            </li>
+          </ul>
+
+          <div class="filepreview" id="filePreview" aria-live="polite">
+          </div>
+        </div>
+      </section>
+
+      <section class="tabpanel" role="tabpanel" id="panel-server" aria-labelledby="tab-server" data-view="server" inert>
+        <header class="view-head">
+          <span class="view-head__index mono">03</span>
+          <h2 class="view-head__title mono">server</h2>
+        </header>
+
+        <div class="server-grid stagger">
+          <div class="status-line mono stagger-item">
+            <span class="status-line__badge">online</span>
+            <span class="dim">·</span>
+            <span id="uptimeVal">uptime 43d 06h</span>
+          </div>
+
+          <ul class="meters mono stagger-item" id="meters">
+            <li>
+              <span class="meters__label">cpu</span>
+              <span class="meters__bar" role="img" aria-label="CPU usage 14 percent">
+                <span class="meters__fill" data-metric="cpu" style="width:14%"></span>
+              </span>
+              <span class="meters__val" data-metric-val="cpu">14%</span>
+            </li>
+            <li>
+              <span class="meters__label">ram</span>
+              <span class="meters__bar" role="img" aria-label="RAM usage 37 percent">
+                <span class="meters__fill" data-metric="ram" style="width:37%"></span>
+              </span>
+              <span class="meters__val" data-metric-val="ram">37%</span>
+            </li>
+            <li>
+              <span class="meters__label">disk</span>
+              <span class="meters__bar" role="img" aria-label="Disk usage 61 percent">
+                <span class="meters__fill" data-metric="disk" style="width:61%"></span>
+              </span>
+              <span class="meters__val" data-metric-val="disk">61%</span>
+            </li>
+          </ul>
+
+          <p class="panel__hint mono stagger-item">yes, these are real stats !</p>
+
+          <a class="server-portal-link mono stagger-item" href="/auth/login">
+            <span>if you're on LAN, visit the tools portal!</span>
+            <span class="server-portal-link__arrow" aria-hidden="true">→</span>
+          </a>
+        </div>
+      </section>
+
+      <section class="tabpanel" role="tabpanel" id="panel-music" aria-labelledby="tab-music" data-view="music" inert>
+        <header class="view-head">
+          <span class="view-head__index mono">04</span>
+          <h2 class="view-head__title mono">music</h2>
+        </header>
+
+        <div class="split split--music stagger">
+          <p class="stagger-item">
+            I play a little piano and record little sketches sometimes. I was arguably a lot better ~2 years ago when I had plenty of time :p. Here's a few I've never posted. 
+          </p>
+          <ul class="tracklist mono stagger-item">
+            <!-- <li> -->
+            <!--   <span class="tracklist__glyph" aria-hidden="true">♪</span> -->
+            <!--   <span class="tracklist__name">stevie wonder - isnt she lovely, tadc ver (06/23/2026)</span> -->
+            <!--   <span class="tracklist__len dim">2:41</span> -->
+            <!-- </li> -->
+            <!-- <li> -->
+            <!--   <span class="tracklist__glyph" aria-hidden="true">♪</span> -->
+            <!--   <span class="tracklist__name">laufey - from the start (10/29/2023)</span> -->
+            <!--   <span class="tracklist__len dim">2:41</span> -->
+            <!-- </li> -->
+            <!-- <li> -->
+            <!--   <span class="tracklist__glyph" aria-hidden="true">♪</span> -->
+            <!--   <span class="tracklist__name">liszt - liebeslied 'love sorrow' (08/09/2022)</span> -->
+            <!--   <span class="tracklist__len dim">1:58</span> -->
+            <!-- </li> -->
+            <!-- <li> -->
+            <!--   <span class="tracklist__glyph" aria-hidden="true">♪</span> -->
+            <!--   <span class="tracklist__name">bo en - my time (06/17/2022)</span> -->
+            <!--   <span class="tracklist__len dim">3:10</span> -->
+            <!-- </li> -->
+            <li>
+                <button class="track" data-src="{{ url_for('static', filename='music/isnt_she_lovely.m4a') }}">
+                  <span class="tracklist__glyph">♪</span>
+                  <span class="tracklist__name">isnt she lovely, tadc ver (06/23/2026)</span>
+                  <span class="tracklist__len dim">0:41</span>
+                </button>
+                <button class="track" data-src="{{ url_for('static', filename='music/stay_with_me.mp3') }}">
+                  <span class="tracklist__glyph">♪</span>
+                  <span class="tracklist__name">stay with me - (03/22/2026)</span>
+                  <span class="tracklist__len dim">1:01</span>
+                </button>
+                <button class="track" data-src="{{ url_for('static', filename='music/from_the_start.mp3') }}">
+                  <span class="tracklist__glyph">♪</span>
+                  <span class="tracklist__name">from the start - (10/29/2023)</span>
+                  <span class="tracklist__len dim">1:28</span>
+                </button>
+                <button class="track" data-src="{{ url_for('static', filename='music/liebeslied.mp3') }}">
+                  <span class="tracklist__glyph">♪</span>
+                  <span class="tracklist__name">liebeslied 'love sorrow' - (08/09/2022)</span>
+                  <span class="tracklist__len dim">1:30</span>
+                </button>
+                <button class="track" data-src="{{ url_for('static', filename='music/my_time.mp3') }}">
+                  <span class="tracklist__glyph">♪</span>
+                  <span class="tracklist__name">my time - (04/24/2021)</span>
+                  <span class="tracklist__len dim">0:19</span>
+                </button>
+            </li>
+          </ul>
+          <p class="panel__hint mono stagger-item">sorry for bad audio :(</p>
+        </div>
+      </section>
+
+      <section class="tabpanel" role="tabpanel" id="panel-letter" aria-labelledby="tab-letter" data-view="letter" inert>
+        <header class="view-head">
+          <span class="view-head__index mono">05</span>
+          <h2 class="view-head__title mono">letter</h2>
+          <span class="view-head__hint mono">writes to my inbox for real</span>
+        </header>
+
+        <div class="editor" id="letterEditor">
+          <div class="editor__tabs mono">
+            <span class="editor__tab is-active">
+              <span class="editor__dot" id="editorDot" aria-hidden="true"></span>
+              letter.txt
+            </span>
+          </div>
+
+          <div class="editor__body">
+            <div class="editor__gutter mono" id="editorGutter" aria-hidden="true">1</div>
+            <div class="editor__field">
+              <label class="sr-only" for="letterFrom">your name</label>
+              <input class="editor__from mono" id="letterFrom" type="text" placeholder="from: (optional)" autocomplete="name">
+              <label class="sr-only" for="letterBody">letter</label>
+              <textarea class="editor__textarea mono" id="letterBody" placeholder="say whatever you'd like…" rows="10"></textarea>
+            </div>
+          </div>
+
+          <div class="editor__status mono">
+            <span id="editorMode">-- INSERT --</span>
+            <span class="dim">·</span>
+            <span id="editorCount">0 words</span>
+            <span class="editor__spacer"></span>
+            <button class="btn" id="sendLetter" type="button">send letter</button>
+          </div>
+        </div>
+
+        <p class="editor__confirm mono" id="editorConfirm" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="tabpanel" role="tabpanel" id="panel-links" aria-labelledby="tab-links" data-view="links" inert>
+        <header class="view-head">
+          <span class="view-head__index mono">06</span>
+          <h2 class="view-head__title mono">links</h2>
+        </header>
+
+        <div class="linkgrid stagger">
+          <a class="linkchip stagger-item" href="/auth/login">
+            <span class="linkchip__glyph mono" aria-hidden="true">&gt;_</span>
+            <span class="linkchip__text">
+              <span class="linkchip__label mono">tools</span>
+              <span class="linkchip__desc">the home server portal</span>
+            </span>
+          </a>
+          <a class="linkchip stagger-item" href="https://github.com/evoPython">
+            <span class="linkchip__glyph mono" aria-hidden="true">⎇</span>
+            <span class="linkchip__text">
+              <span class="linkchip__label mono">git</span>
+              <span class="linkchip__desc">code &amp; dotfiles</span>
+            </span>
+          </a>
+          <a class="linkchip stagger-item" href="#" data-fake-link>
+            <span class="linkchip__glyph mono" aria-hidden="true">@</span>
+            <span class="linkchip__text">
+              <span class="linkchip__label mono">mail</span>
+              <span class="linkchip__desc">say hi directly</span>
+            </span>
+          </a>
+          <a class="linkchip stagger-item" href="#" data-fake-link>
+            <span class="linkchip__glyph mono" aria-hidden="true">◈</span>
+            <span class="linkchip__text">
+              <span class="linkchip__label mono">status</span>
+              <span class="linkchip__desc">uptime for every service</span>
+            </span>
+          </a>
+        </div>
+      </section>
+
+    </div>
+</div>
+
+<nav class="tabbar mono" aria-label="Sections" id="tabbar">
+  <button data-view="home" aria-current="true" aria-label="home"><span class="tabbar__glyph" aria-hidden="true">~</span></button>
+  <button data-view="about" aria-label="about"><span class="tabbar__glyph" aria-hidden="true">@</span></button>
+  <button data-view="projects" aria-label="projects"><span class="tabbar__glyph" aria-hidden="true">/</span></button>
+  <button data-view="server" aria-label="server"><span class="tabbar__glyph" aria-hidden="true">#</span></button>
+  <button data-view="music" aria-label="music"><span class="tabbar__glyph" aria-hidden="true">♪</span></button>
+  <button data-view="letter" aria-label="letter"><span class="tabbar__glyph" aria-hidden="true">✎</span></button>
+  <button data-view="links" aria-label="links"><span class="tabbar__glyph" aria-hidden="true">→</span></button>
+</nav>
+
+<div class="music-player" id="musicPlayer" aria-hidden="true">
+    <div class="music-player__comment mono" id="playerComment" aria-live="polite"></div>
+
+    <div class="music-player__row">
+        <button class="music-player__playbtn mono" id="playerToggle" type="button" aria-label="play">▶</button>
+
+        <div class="music-player__body">
+            <div class="music-player__info mono">
+                <span class="music-player__glyph" aria-hidden="true">♪</span>
+                <span class="music-player__titlebox" id="playerTitleBox"><span id="playerTitle">nothing playing</span></span>
+            </div>
+            <div class="music-player__seek">
+                <span class="music-player__time mono" id="playerTime">0:00</span>
+                <div class="music-player__track" id="playerTrack" role="slider" tabindex="0" aria-label="seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div class="music-player__track-fill" id="playerTrackFill"></div>
+                    <div class="music-player__track-thumb" id="playerTrackThumb"></div>
+                </div>
+                <span class="music-player__time mono" id="playerDuration">0:00</span>
+            </div>
+        </div>
+
+        <div class="music-player__volume">
+            <span class="music-player__volicon" aria-hidden="true">◆</span>
+            <input type="range" id="playerVolume" class="music-player__range music-player__range--vol" min="0" max="1" value="1" step="0.01" aria-label="volume">
+        </div>
+
+        <button class="music-player__close" id="musicPlayerClose" aria-label="close player" type="button">×</button>
+    </div>
+
+    <audio id="audioPlayer" preload="metadata"></audio>
+</div>
+
+<div class="cmdk-overlay" id="cmdkOverlay" hidden></div>
+<div class="cmdk" id="cmdk" role="dialog" aria-modal="true" aria-label="Command palette" hidden>
+  <div class="cmdk__inputrow mono">
+    <span aria-hidden="true">&gt;</span>
+    <input type="text" id="cmdkInput" autocomplete="off" spellcheck="false" placeholder="type a command… try 'help'">
+  </div>
+  <div class="cmdk__output mono" id="cmdkOutput" role="log" aria-live="polite"></div>
+  <div class="cmdk__hint mono">
+    <span><kbd>enter</kbd> run</span>
+    <span><kbd>esc</kbd> close</span>
+  </div>
+</div>
 
 {% endblock %}

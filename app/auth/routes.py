@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, current_app
 
 from app.auth import users
+from app.core.security import is_personal_device, is_logged_in
 
 
 auth = Blueprint("auth", __name__, url_prefix="/auth")
@@ -48,6 +49,9 @@ def logout():
 
 @auth.route("/root", methods=["GET", "POST"])
 def root_login():
+    if is_personal_device():
+        return redirect(url_for("remote.index"))
+
     error = None
 
     if request.method == "POST":
@@ -66,4 +70,6 @@ def root_login():
 @auth.route("/root/logout")
 def root_logout():
     session.pop("is_root", None)
+    if is_logged_in():
+        return redirect(url_for("cross_remote.index"))
     return redirect(url_for("portfolio.home"))

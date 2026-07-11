@@ -3,21 +3,23 @@
 {% block title %}Clipboard{% endblock %}
 
 {% block content %}
+<main class="stage" id="stage">
+<div class="page-shell">
+  <h1>Clipboard Sync</h1>
 
-<h1>Clipboard Sync</h1>
+  {% if message %}
+  <p>{{ message }}</p>
+  {% endif %}
 
-{% if message %}
-<p>{{ message }}</p>
-{% endif %}
+  <p>Current laptop clipboard: {{ current_text if current_text else "(empty or unavailable)" }}</p>
 
-<p>Current laptop clipboard: {{ current_text if current_text else "(empty or unavailable)" }}</p>
+  <form method="post">
+    <textarea name="text" rows="4" cols="50">{{ current_text or "" }}</textarea>
+    <br>
+    <button type="submit" class="btn">Send to Laptop</button>
+  </form>
 
-<form method="post">
-<textarea name="text" rows="4" cols="50">{{ current_text or "" }}</textarea>
-<br>
-<button type="submit">Send to Laptop</button>
-</form>
-
-<p><a href="/tools">Back to tools</a></p>
-
+  <p><a href="/tools">Back to tools</a></p>
+</div>
+</main>
 {% endblock %}

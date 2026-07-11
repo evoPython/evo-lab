@@ -3,24 +3,25 @@
 {% block title %}Niri{% endblock %}
 
 {% block content %}
+<main class="stage" id="stage">
+<div class="page-shell">
+  <h1>Niri Layout</h1>
 
-<h1>Niri Layout</h1>
+  <p id="status"></p>
+  <p id="overview-state"></p>
 
-<p id="status"></p>
-<p id="overview-state"></p>
+  <h2 class="h2">Screen</h2>
+  <div id="screen-wrap" style="position:relative; display:inline-block;">
+    <img id="screenshot" src="/niri/screenshot" style="max-width:500px; display:block;">
+    <div id="viewport-outline" style="position:absolute; border:2px solid red; pointer-events:none;"></div>
+  </div>
+  <p><button onclick="refreshScreenshot()">Refresh screenshot</button></p>
 
-<h2>Screen</h2>
-<div id="screen-wrap" style="position:relative; display:inline-block;">
-  <img id="screenshot" src="/niri/screenshot" style="max-width:500px; display:block;">
-  <div id="viewport-outline" style="position:absolute; border:2px solid red; pointer-events:none;"></div>
-</div>
-<p><button onclick="refreshScreenshot()">Refresh screenshot</button></p>
+  <h2 class="h2">Workspaces</h2>
+  <div id="workspaces" style="display:flex; gap:20px;"></div>
 
-<h2>Workspaces</h2>
-<div id="workspaces" style="display:flex; gap:20px;"></div>
-
-<script>
-const SCALE = 0.15; // px per layout px, for the workspace boxes
+  <script>
+const SCALE = 0.15;
 
 function setStatus(msg) {
   document.getElementById("status").textContent = msg;
@@ -110,8 +111,6 @@ function updateViewportOutline(outputs) {
     outline.style.display = "none";
     return;
   }
-  // Screenshot is a 1:1 capture of the output, so the full image
-  // area *is* what the screen currently shows.
   const scale = img.clientWidth / img.naturalWidth;
   outline.style.left = "0px";
   outline.style.top = "0px";
@@ -149,6 +148,7 @@ document.getElementById("screenshot").addEventListener("load", () => loadState()
 
 loadState();
 setInterval(loadState, 4000);
-</script>
-
+  </script>
+</div>
+</main>
 {% endblock %}
