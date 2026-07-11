@@ -1,12 +1,4 @@
-from flask import (
-    Blueprint,
-    render_template,
-    make_response,
-    current_app,
-    request,
-    jsonify,
-    abort,
-)
+from flask import Blueprint, render_template, jsonify
 
 from app.core.security import is_personal_device, require_personal_device
 from app.dashboard.system import get_system_stats
@@ -20,6 +12,7 @@ dashboard = Blueprint(
 
 
 @dashboard.route("/")
+@require_personal_device
 def index():
 
     personal = is_personal_device()
@@ -30,45 +23,23 @@ def index():
     )
 
 
-@dashboard.route("/pair")
-def pair():
-    """
-    Visit /dashboard/pair?key=<DEVICE_TOKEN> from a trusted device to
-    pair it. Meant to be reached via a private link or QR code you
-    generate for yourself, not something exposed publicly.
-    """
-
-    expected = current_app.config.get("DEVICE_TOKEN")
-    key = request.args.get("key", "")
-
-    if not expected or key != expected:
-        abort(403)
-
-    response = make_response(
-        "Device successfully paired. You can close this page."
-    )
-
-    response.set_cookie(
-        "evo_device",
-        expected,
-        httponly=True,
-        samesite="Lax",
-        max_age=60 * 60 * 24 * 365,  # 1 year
-    )
-
-    return response
-
-
-@dashboard.route("/unpair")
-def unpair():
-
-    response = make_response("Device unpaired.")
-    response.delete_cookie("evo_device")
-
-    return response
-
-
 @dashboard.route("/api/stats")
 @require_personal_device
 def api_stats():
     return jsonify(get_system_stats())
+
+
+@dashboard.route("/api/public-stats")
+def api_public_stats():
+    """
+    Trimmed-down, unauthenticated version of /api/stats for the
+    homepage "server" tab. Only exposes load percentages and uptime —
+    no IPs, core counts, temperatures, or battery details.
+    """
+    stats = get_system_stats()
+    return jsonify({
+        "cpu": stats["cpu"]["percent"],
+        "ram": stats["ram"]["percent"],
+        "disk": stats["disk"]["percent"],
+        "uptime": stats["uptime"],
+    })

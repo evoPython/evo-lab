@@ -7,6 +7,7 @@ from flask import (
 )
 
 from app.core.security import require_personal_device
+from app.core.notify import notify
 from app.tools import url_opener, clipboard, files
 
 
@@ -37,6 +38,7 @@ def open_url():
     if request.method == "POST":
         try:
             result = url_opener.open_url(request.form.get("url"))
+            notify("Remote", f"Opened {result}")
         except url_opener.InvalidURLError as exc:
             error = str(exc)
 
@@ -55,6 +57,7 @@ def api_open_url():
 
     try:
         opened = url_opener.open_url(data.get("url"))
+        notify("Remote", f"Opened {opened}")
         return jsonify({"status": "ok", "url": opened})
     except url_opener.InvalidURLError as exc:
         return jsonify({"status": "error", "message": str(exc)}), 400
@@ -72,6 +75,7 @@ def clipboard_view():
 
     if request.method == "POST":
         clipboard.set_clipboard(request.form.get("text", ""))
+        notify("Remote", "Clipboard updated")
         message = "Clipboard updated on laptop."
 
     current_text = clipboard.get_clipboard()
@@ -89,6 +93,7 @@ def api_clipboard():
 
     data = request.get_json(silent=True) or {}
     clipboard.set_clipboard(data.get("text", ""))
+    notify("Remote", "Clipboard updated")
 
     return jsonify({"status": "ok"})
 

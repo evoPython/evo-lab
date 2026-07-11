@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Root Login{% endblock %}
+
+{% block content %}
+<main class="stage" id="stage">
+<div class="auth-panel">
+  <a class="back-link mono" href="/">&larr; back to home</a>
+  <h1>Root Login</h1>
+  <p class="auth-note">Root access unlocks remote controls, tools, and personal device features on this server.</p>
+
+  {% if error %}
+  <p class="error">{{ error }}</p>
+  {% endif %}
+
+  <form method="post">
+    <input type="password" name="password" placeholder="root password" required autocomplete="current-password">
+    <button type="submit" class="btn btn--primary">Log in</button>
+  </form>
+</div>
+</main>
+{% endblock %}

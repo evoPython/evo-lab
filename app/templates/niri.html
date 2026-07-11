@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Niri{% endblock %}
+
+{% block content %}
+<main class="stage" id="stage">
+<div class="page-shell">
+  <h1>Niri Layout</h1>
+
+  <p id="status"></p>
+  <p id="overview-state"></p>
+
+  <h2 class="h2">Screen</h2>
+  <div id="screen-wrap" style="position:relative; display:inline-block;">
+    <img id="screenshot" src="/niri/screenshot" style="max-width:500px; display:block;">
+    <div id="viewport-outline" style="position:absolute; border:2px solid red; pointer-events:none;"></div>
+  </div>
+  <p><button onclick="refreshScreenshot()">Refresh screenshot</button></p>
+
+  <h2 class="h2">Workspaces</h2>
+  <div id="workspaces" style="display:flex; gap:20px;"></div>
+
+  <script>
+const SCALE = 0.15;
+
+function setStatus(msg) {
+  document.getElementById("status").textContent = msg;
+}
+
+function refreshScreenshot() {
+  document.getElementById("screenshot").src = "/niri/screenshot?t=" + Date.now();
+}
+
+async function sendAction(action, window_id, workspace_idx) {
+  setStatus("Working...");
+  try {
+    const res = await fetch("/niri/api/action", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({action, window_id, workspace_idx}),
+    });
+    const data = await res.json();
+    setStatus(data.status === "ok" ? "Done." : "Error: " + data.message);
+    if (data.status === "ok") setTimeout(loadState, 300);
+  } catch (e) {
+    setStatus("Request failed.");
+  }
+}
+
+function makeWindowBox(win) {
+  const box = document.createElement("div");
+  box.textContent = (win.app_id || "?") + ": " + (win.title || "");
+  box.title = "id " + win.id;
+  box.draggable = true;
+  box.style.border = win.is_focused ? "2px solid green" : "1px solid black";
+  box.style.width = Math.max(40, win.layout.tile_size[0] * SCALE) + "px";
+  box.style.height = Math.max(30, win.layout.tile_size[1] * SCALE) + "px";
+  box.style.overflow = "hidden";
+  box.style.fontSize = "11px";
+  box.style.padding = "2px";
+  box.style.background = win.is_floating ? "#eee" : "#fff";
+
+  box.addEventListener("dragstart", (e) => {
+    e.dataTransfer.setData("text/plain", win.id);
+  });
+  box.addEventListener("dblclick", () => sendAction("fullscreen-window", win.id));
+  box.addEventListener("click", () => sendAction("focus-window", win.id));
+
+  return box;
+}
+
+function makeWorkspaceColumn(ws, windows) {
+  const col = document.createElement("div");
+  col.style.border = ws.is_active ? "2px solid blue" : "1px solid gray";
+  col.style.minWidth = "220px";
+  col.style.minHeight = "300px";
+  col.style.padding = "6px";
+
+  const header = document.createElement("div");
+  header.textContent = "Workspace " + ws.idx + (ws.is_focused ? " (focused)" : "");
+  col.appendChild(header);
+
+  const winWrap = document.createElement("div");
+  winWrap.style.display = "flex";
+  winWrap.style.flexWrap = "wrap";
+  winWrap.style.gap = "4px";
+  winWrap.style.marginTop = "6px";
+
+  windows
+    .filter(w => w.workspace_id === ws.id)
+    .sort((a, b) => a.layout.pos_in_scrolling_layout[0] - b.layout.pos_in_scrolling_layout[0])
+    .forEach(w => winWrap.appendChild(makeWindowBox(w)));
+
+  col.appendChild(winWrap);
+
+  col.addEventListener("dragover", (e) => e.preventDefault());
+  col.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const winId = e.dataTransfer.getData("text/plain");
+    sendAction("move-window-to-workspace", parseInt(winId), ws.idx);
+  });
+
+  return col;
+}
+
+function updateViewportOutline(outputs) {
+  const output = Object.values(outputs)[0];
+  const img = document.getElementById("screenshot");
+  const outline = document.getElementById("viewport-outline");
+  if (!output || !img.naturalWidth) {
+    outline.style.display = "none";
+    return;
+  }
+  const scale = img.clientWidth / img.naturalWidth;
+  outline.style.left = "0px";
+  outline.style.top = "0px";
+  outline.style.width = (output.logical.width * scale) + "px";
+  outline.style.height = (output.logical.height * scale) + "px";
+  outline.style.display = "block";
+}
+
+async function loadState() {
+  try {
+    const res = await fetch("/niri/api/state");
+    const data = await res.json();
+    if (data.error) {
+      setStatus("Error: " + data.error);
+      return;
+    }
+
+    document.getElementById("overview-state").textContent =
+      "Overview: " + (data.overview.is_open ? "open" : "closed");
+
+    const wsDiv = document.getElementById("workspaces");
+    wsDiv.innerHTML = "";
+    data.workspaces
+      .sort((a, b) => a.idx - b.idx)
+      .forEach(ws => wsDiv.appendChild(makeWorkspaceColumn(ws, data.windows)));
+
+    updateViewportOutline(data.outputs);
+    setStatus("");
+  } catch (e) {
+    setStatus("Failed to load niri state.");
+  }
+}
+
+document.getElementById("screenshot").addEventListener("load", () => loadState());
+
+loadState();
+setInterval(loadState, 4000);
+  </script>
+</div>
+</main>
+{% endblock %}

@@ -1,33 +1,94 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-    <title>{% block title %}Evo{% endblock %}</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="stylesheet"
-    href="{{ url_for('static', filename='css/style.css') }}">
+  <title>{% block title %}evo.ftp.sh{% endblock %}</title>
+
+  <!-- General -->
+  <meta name="description" content="{% block description %}welcome to my slice of the internet :){%endblock %}">
+  <meta name="author" content="evo">
+  <meta name="theme-color" content="#7c5cff">
+  <meta name="color-scheme" content="dark">
+
+  <!-- Open Graph (Discord, Facebook, LinkedIn, etc.) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="evo.ftp.sh">
+  <meta property="og:title" content="{% block og_title %}evo.ftp.sh{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}welcome to my slice of the internet :){% endblock %}">
+  <meta property="og:url" content="{{ request.url }}">
+  <meta property="og:image" content="{{ url_for('static', filename='images/pfp.png', _external=True) }}">
+  <meta property="og:image:alt" content="Profile picture of evo">
+
+  <!-- Twitter/X -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="{% block twitter_title %}evo.ftp.sh{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}student, programmer, musician. projects, experiments, self-hosting, and whatever i'm working on at 2am.{% endblock %}">
+  <meta name="twitter:image" content="{{ url_for('static', filename='images/pfp.png', _external=True) }}">
+
+  <link rel="canonical" href="{{ request.url }}">
+
+  <!-- Favicon -->
+  <link rel="icon" href="{{ url_for('static', filename='images/pfp.png') }}">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-
 <body>
+  <a class="skip-link" href="#stage">skip to content</a>
 
-<nav>
-    <a href="/">Home</a>
-    <a href="/dashboard">Dashboard</a>
+  <header class="topbar">
+    <div class="topbar__left">
+      <span class="topbar__id mono">evo<span class="accent-dim">.ftp.sh</span></span>
+      <span class="topbar__tagline mono dim">my slice of the internet</span>
+    </div>
+    <div class="topbar__right">
+      <span class="topbar__greet mono" id="greet"></span>
+      <span class="topbar__clock mono" id="clock"></span>
+    </div>
+  </header>
+
+  {% if is_personal or is_logged_in %}
+  <nav class="topnav" aria-label="Main">
     {% if is_personal %}
-    <a href="/controls">Controls</a>
-    <a href="/tools">Tools</a>
+    <a href="/dashboard" class="topnav__item">Dashboard</a>
+    <a href="/tools" class="topnav__item">Tools</a>
+    <a href="/remote" class="topnav__item">Remote</a>
+    <a href="/letters/inbox" class="topnav__item">Inbox{% if unread_letters %}<span class="topnav__badge">{{ unread_letters }}</span>{% endif %}</a>
+    {% else %}
+    <a href="/auth/root" class="topnav__item">Dashboard</a>
+    <a href="/auth/root" class="topnav__item">Tools</a>
+    <a href="/auth/root" class="topnav__item">Remote</a>
     {% endif %}
-</nav>
+    {% if is_logged_in %}
+    <a href="/cross-remote" class="topnav__item">Cross-Remote</a>
+    {% else %}
+    <a href="/auth/login" class="topnav__item">Cross-Remote</a>
+    {% endif %}
+    <span class="topnav__right">
+      {% if is_personal %}
+      <a href="/auth/root/logout" class="topnav__item mono">root logout</a>
+      {% else %}
+      <a href="/auth/root" class="topnav__item mono">root login</a>
+      {% endif %}
+      |
+      {% if is_logged_in %}
+      {{ current_user }}<a href="/auth/logout" class="topnav__item">Logout</a>
+      {% else %}
+      <a href="/auth/login" class="topnav__item">Login / Register</a>
+      {% endif %}
+    </span>
+  </nav>
+  {% endif %}
 
+  {% block content %}{% endblock %}
 
-<main>
-
-{% block content %}
-{% endblock %}
-
-</main>
-
-
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
-
 </html>

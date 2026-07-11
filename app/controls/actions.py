@@ -17,42 +17,27 @@ def _run_detached(cmd):
 
     subprocess.Popen(cmd)
 
+
 def lock_screen():
     """
     Lock screen using Noctalia v5.
-
     Designed for:
     - niri
     - Wayland
     - Noctalia Shell v5
-
     Requires:
     - noctalia running
     """
-
-    cmd = [
-        "noctalia",
-        "msg",
-        "session",
-        "lock",
-    ]
+    cmd = ["noctalia", "msg", "session", "lock"]
 
     if not shutil.which("noctalia"):
-        raise ActionError(
-            "Noctalia command not found."
-        )
+        raise ActionError("Noctalia command not found.")
 
     try:
-        subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
-        raise ActionError(
-            f"Failed to lock screen: {e}"
-        )
+        raise ActionError(f"Failed to lock screen: {e}")
+
 
 def shutdown():
     # Relies on systemd-logind/polkit allowing the active local user

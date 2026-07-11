@@ -3,13 +3,35 @@
 {% block title %}Tools{% endblock %}
 
 {% block content %}
+<main class="stage" id="stage">
 
-<h1>Tools</h1>
+<div class="tools-main">
+  <div class="tools-intro">
+    <h1 class="mono">tools</h1>
+  </div>
 
-<ul>
-<li><a href="/tools/open-url">Open URL on laptop</a></li>
-<li><a href="/tools/clipboard">Clipboard sync</a></li>
-<li><a href="/tools/files">File transfer</a></li>
-</ul>
+  <section class="tools-group">
+    <h2 class="mono dim">media</h2>
+    <div class="tools-grid">
+      <a class="tool-card" href="/tools/open-url">
+        <span class="tool-card__glyph" aria-hidden="true">▶</span>
+        <span class="tool-card__name">open url</span>
+        <span class="tool-card__desc">open a link on the laptop</span>
+      </a>
+      <a class="tool-card" href="/tools/clipboard">
+        <span class="tool-card__glyph" aria-hidden="true">⎘</span>
+        <span class="tool-card__name">clipboard</span>
+        <span class="tool-card__desc">sync text to laptop clipboard</span>
+      </a>
+      <a class="tool-card" href="/tools/files">
+        <span class="tool-card__glyph" aria-hidden="true">▤</span>
+        <span class="tool-card__name">files</span>
+        <span class="tool-card__desc">upload and download files</span>
+      </a>
+    </div>
+  </section>
 
+  <p class="tools-footnote mono dim">local tools — access requires root login.</p>
+  </div>
+</main>
 {% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<main class="stage" id="stage">
+<div class="auth-panel">
+  <a class="back-link mono" href="/">&larr; back to home</a>
+  <h1>Login / Register</h1>
+  <p class="auth-note">Tools on this server are built primarily for people on the Pisay LAN / school wifi. You need an account to access them.</p>
+
+  {% if error %}
+  <p class="error">{{ error }}</p>
+  {% endif %}
+
+  <form method="post">
+    <input type="text" name="username" placeholder="username" required autocomplete="username">
+    <input type="password" name="password" placeholder="password" required autocomplete="current-password">
+    <button type="submit" name="action" value="login" class="btn btn--primary">Log in</button>
+    <button type="submit" name="action" value="register" class="btn">Register</button>
+  </form>
+</div>
+</main>
+{% endblock %}

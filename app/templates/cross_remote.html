@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Cross-Remote{% endblock %}
+
+{% block content %}
+<main class="stage" id="stage">
+<div class="xr-shell">
+  <div class="xr-head">
+    <h1 class="mono">cross-remote</h1>
+    <p>Logged in as {{ me }}</p>
+  </div>
+
+  <div id="incoming-call" class="xr-call-card" style="display:none;">
+    <p id="incoming-text"></p>
+    <div class="xr-call-actions">
+      <button class="btn btn--primary" onclick="acceptCall()">Accept</button>
+      <button class="btn" onclick="declineCall()">Decline</button>
+    </div>
+  </div>
+
+  <div id="call-ui" class="xr-call-ui" style="display:none;">
+    <p>In call with <strong id="call-peer"></strong></p>
+    <div class="xr-video-row">
+      <video id="local-video" autoplay muted playsinline></video>
+      <video id="remote-video" autoplay playsinline></video>
+    </div>
+    <div><button class="btn" onclick="endCall()">Hang up</button></div>
+  </div>
+
+  <div class="xr-grid">
+    <aside class="xr-online">
+      <h2>Online</h2>
+      <ul id="online-list"></ul>
+    </aside>
+
+    <section class="xr-chat" id="chat-box" style="display:none;">
+      <h2 id="chat-title"></h2>
+      <div id="messages" class="xr-messages"></div>
+      <div class="xr-inputrow">
+        <input type="text" id="msg-input" placeholder="Message…">
+        <button class="btn btn--primary" onclick="sendMessage()">Send</button>
+        <button class="btn" onclick="startCall()">Call</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+const ME = "{{ me }}";
+let currentPeer = null;
+let lastMsgId = 0;
+let msgPoll = null;
+
+let pc = null, localStream = null, currentCallId = null, signalPoll = null, statePoll = null, isCallee = false;
+
+async function postJSON(url, body) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body || {}),
+  });
+  return res.json();
+}
+
+// --- Online users ---
+async function loadOnline() {
+  try {
+    const res = await fetch("/cross-remote/api/online");
+    const users = await res.json();
+    const list = document.getElementById("online-list");
+    list.innerHTML = "";
+    users.forEach(u => {
+      const li = document.createElement("li");
+      li.textContent = u;
+      if (u === currentPeer) li.classList.add("is-active");
+      li.onclick = () => openChat(u);
+      list.appendChild(li);
+    });
+  } catch (e) {}
+}
+
+// --- Chat ---
+function openChat(user) {
+  currentPeer = user;
+  lastMsgId = 0;
+  document.getElementById("chat-title").textContent = "Chat with " + user;
+  document.getElementById("chat-box").style.display = "flex";
+  document.getElementById("messages").innerHTML = "";
+  if (msgPoll) clearInterval(msgPoll);
+  pollMessages();
+  msgPoll = setInterval(pollMessages, 2000);
+}
+
+async function pollMessages() {
+  if (!currentPeer) return;
+  try {
+    const res = await fetch("/cross-remote/api/messages?with=" + encodeURIComponent(currentPeer) + "&since_id=" + lastMsgId);
+    const msgs = await res.json();
+    const box = document.getElementById("messages");
+    msgs.forEach(m => {
+      const p = document.createElement("div");
+      p.className = "xr-msg " + (m.sender === ME ? "xr-msg--out" : "xr-msg--in");
+      p.textContent = m.body;
+      const meta = document.createElement("span");
+      meta.className = "xr-msg__meta";
+      meta.textContent = m.sender;
+      p.appendChild(meta);
+      box.appendChild(p);
+      lastMsgId = Math.max(lastMsgId, m.id);
+    });
+    if (msgs.length) box.scrollTop = box.scrollHeight;
+  } catch (e) {}
+}
+
+async function sendMessage() {
+  const input = document.getElementById("msg-input");
+  if (!currentPeer || !input.value.trim()) return;
+  await postJSON("/cross-remote/api/messages/send", {to: currentPeer, body: input.value.trim()});
+  input.value = "";
+  pollMessages();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const input = document.getElementById("msg-input");
+  if (input) input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
+});
+
+// --- Incoming call polling (always on) ---
+async function pollIncoming() {
+  if (currentCallId) return;
+  try {
+    const res = await fetch("/cross-remote/api/call/incoming");
+    const calls = await res.json();
+    if (calls.length) {
+      const call = calls[0];
+      currentCallId = call.id;
+      isCallee = true;
+      document.getElementById("incoming-text").textContent = "Incoming call from " + call.caller;
+      document.getElementById("incoming-call").style.display = "flex";
+    }
+  } catch (e) {}
+}
+
+async function declineCall() {
+  await postJSON("/cross-remote/api/call/decline", {call_id: currentCallId});
+  document.getElementById("incoming-call").style.display = "none";
+  currentCallId = null;
+  isCallee = false;
+}
+
+async function acceptCall() {
+  document.getElementById("incoming-call").style.display = "none";
+  await postJSON("/cross-remote/api/call/accept", {call_id: currentCallId});
+  await setupPeerConnection();
+  pollSignals();
+  watchCallState();
+  showCallUI(document.getElementById("incoming-text").textContent.replace("Incoming call from ", ""));
+}
+
+// --- Outgoing call ---
+async function startCall() {
+  if (!currentPeer) return;
+  const res = await postJSON("/cross-remote/api/call/start", {to: currentPeer});
+  currentCallId = res.call_id;
+  isCallee = false;
+  await setupPeerConnection();
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  await postJSON("/cross-remote/api/call/signal", {call_id: currentCallId, kind: "offer", data: JSON.stringify(offer)});
+
+  pollSignals();
+  watchCallState();
+  showCallUI(currentPeer);
+}
+
+function showCallUI(peerName) {
+  document.getElementById("call-peer").textContent = peerName;
+  document.getElementById("call-ui").style.display = "flex";
+}
+
+async function setupPeerConnection() {
+  pc = new RTCPeerConnection({iceServers: [{urls: "stun:stun.l.google.com:19302"}]});
+  localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  document.getElementById("local-video").srcObject = localStream;
+
+  pc.ontrack = (e) => {
+    document.getElementById("remote-video").srcObject = e.streams[0];
+  };
+  pc.onicecandidate = (e) => {
+    if (e.candidate) {
+      postJSON("/cross-remote/api/call/signal", {
+        call_id: currentCallId, kind: "candidate", data: JSON.stringify(e.candidate),
+      });
+    }
+  };
+}
+
+async function pollSignals() {
+  if (!currentCallId) return;
+  let sinceId = 0;
+  signalPoll = setInterval(async () => {
+    if (!currentCallId) { clearInterval(signalPoll); return; }
+    try {
+      const res = await fetch("/cross-remote/api/call/signals?call_id=" + currentCallId + "&since_id=" + sinceId);
+      const signals = await res.json();
+      for (const sig of signals) {
+        sinceId = Math.max(sinceId, sig.id);
+        const data = JSON.parse(sig.data);
+        if (sig.kind === "offer") {
+          await pc.setRemoteDescription(new RTCSessionDescription(data));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await postJSON("/cross-remote/api/call/signal", {call_id: currentCallId, kind: "answer", data: JSON.stringify(answer)});
+        } else if (sig.kind === "answer") {
+          await pc.setRemoteDescription(new RTCSessionDescription(data));
+        } else if (sig.kind === "candidate") {
+          try { await pc.addIceCandidate(new RTCIceCandidate(data)); } catch (e) {}
+        }
+      }
+    } catch (e) {}
+  }, 1000);
+}
+
+function watchCallState() {
+  statePoll = setInterval(async () => {
+    if (!currentCallId) { clearInterval(statePoll); return; }
+    try {
+      const res = await fetch("/cross-remote/api/call/state?call_id=" + currentCallId);
+      const call = await res.json();
+      if (call.status === "ended" || call.status === "declined") {
+        cleanupCall();
+      }
+    } catch (e) {}
+  }, 1500);
+}
+
+async function endCall() {
+  if (currentCallId) await postJSON("/cross-remote/api/call/end", {call_id: currentCallId});
+  cleanupCall();
+}
+
+function cleanupCall() {
+  if (pc) pc.close();
+  if (localStream) localStream.getTracks().forEach(t => t.stop());
+  pc = null; localStream = null; currentCallId = null; isCallee = false;
+  if (signalPoll) clearInterval(signalPoll);
+  if (statePoll) clearInterval(statePoll);
+  document.getElementById("call-ui").style.display = "none";
+  document.getElementById("incoming-call").style.display = "none";
+}
+
+loadOnline();
+setInterval(loadOnline, 5000);
+setInterval(pollIncoming, 2000);
+  </script>
+</div>
+</main>
+{% endblock %}
