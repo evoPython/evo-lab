@@ -1,0 +1,106 @@
+/* ============================================================
+   HOME
+   ============================================================ */
+.hero { padding-bottom: 40px; }
+
+.hero__prompt {
+  font-size: var(--fs-base);
+  color: var(--accent);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 18px;
+  min-height: 1em;
+}
+.hero__caret { color: var(--text-faint); }
+.cursor {
+  display: inline-block;
+  width: 7px;
+  height: 1em;
+  background: var(--accent);
+  vertical-align: -0.15em;
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.hero__title {
+  font-size: clamp(34px, 10vw, 68px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-bottom: 20px;
+  word-break: break-word;
+}
+
+.hero__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+  margin-bottom: 22px;
+}
+.hero__tags li {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+
+.hero__line {
+  display: block;
+  font-size: var(--fs-lg);
+  color: var(--text-dim);
+  max-width: 42ch;
+}
+
+.glance {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.glance__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+.glance__item:hover, .glance__item:focus-visible {
+  border-color: var(--accent-dim);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+.glance__idx { font-size: var(--fs-sm); color: var(--text-faint); flex-shrink: 0; }
+.glance__name { font-size: var(--fs-base); color: var(--text); flex-shrink: 0; }
+.glance__desc {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .glance { grid-template-columns: 1fr; }
+  .glance__item {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    row-gap: 4px;
+    padding: 16px 14px;
+    min-height: 56px;
+  }
+  .glance__desc {
+    flex-basis: 100%;
+    margin-left: 22px;
+    text-align: left;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+}
+

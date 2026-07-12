@@ -72,16 +72,17 @@
     <a href="/auth/login" class="topnav__item">Cross-Remote</a>
     {% endif %}
     <span class="topnav__right">
-      {% if is_personal %}
-      <a href="/auth/root/logout" class="topnav__item mono">root logout</a>
-      {% else %}
+      {% if not is_personal %}
       <a href="/auth/root" class="topnav__item mono">root login</a>
-      {% endif %}
       |
+      {% endif %}
       {% if is_logged_in %}
-      {{ current_user }}<a href="/auth/logout" class="topnav__item">Logout</a>
+      {{ current_user }}
       {% else %}
       <a href="/auth/login" class="topnav__item">Login / Register</a>
+      {% endif %}
+      {% if is_personal or is_logged_in %}
+      <a href="/auth/logout" class="topnav__item">Logout</a>
       {% endif %}
     </span>
   </nav>

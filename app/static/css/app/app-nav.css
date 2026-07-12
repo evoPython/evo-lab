@@ -1,0 +1,61 @@
+/* ============================================================
+   TOP NAV (app shell pages)
+   ============================================================ */
+.topnav {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-soft);
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.topnav__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+  border-radius: var(--radius-sm);
+  transition: color 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+.topnav__item:hover, .topnav__item:focus-visible {
+  color: var(--text);
+  background: var(--panel-hover);
+}
+.topnav__right {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 640px) {
+  .topnav {
+    padding: 10px 12px;
+    gap: 4px;
+    row-gap: 8px;
+  }
+  .topnav__item {
+    font-size: var(--fs-sm);
+    padding: 9px 10px;
+    min-height: 40px;
+  }
+  .topnav__right {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+    margin-top: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn { padding: 10px 16px; }
+}
+

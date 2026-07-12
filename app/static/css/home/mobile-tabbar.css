@@ -1,0 +1,45 @@
+/* ============================================================
+   MOBILE TAB BAR
+   ============================================================ */
+.tabbar {
+  display: none;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: var(--tabbar-h);
+  background: rgba(11, 12, 15, 0.94);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border);
+  z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+@media (max-width: 860px) { .tabbar { display: flex; } }
+
+.tabbar button {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  position: relative;
+  transition: color 0.15s ease;
+}
+.tabbar button[aria-current="true"] { color: var(--accent); }
+.tabbar button[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.tabbar__glyph {
+  font-size: var(--fs-lg);
+  line-height: 1;
+  color: inherit;
+}
+
+@media (max-width: 860px) {
+  .stage, .view-stage { padding-bottom: calc(var(--tabbar-h) + 30px); }
+}
+

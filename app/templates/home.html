@@ -188,33 +188,71 @@
             <span class="status-line__badge">online</span>
             <span class="dim">·</span>
             <span id="uptimeVal">uptime 43d 06h</span>
+            <span class="dim">·</span>
+            <span id="procVal">-- proc</span>
           </div>
 
-          <ul class="meters mono stagger-item" id="meters">
-            <li>
-              <span class="meters__label">cpu</span>
-              <span class="meters__bar" role="img" aria-label="CPU usage 14 percent">
-                <span class="meters__fill" data-metric="cpu" style="width:14%"></span>
-              </span>
-              <span class="meters__val" data-metric-val="cpu">14%</span>
-            </li>
-            <li>
-              <span class="meters__label">ram</span>
-              <span class="meters__bar" role="img" aria-label="RAM usage 37 percent">
-                <span class="meters__fill" data-metric="ram" style="width:37%"></span>
-              </span>
-              <span class="meters__val" data-metric-val="ram">37%</span>
-            </li>
-            <li>
-              <span class="meters__label">disk</span>
-              <span class="meters__bar" role="img" aria-label="Disk usage 61 percent">
-                <span class="meters__fill" data-metric="disk" style="width:61%"></span>
-              </span>
-              <span class="meters__val" data-metric-val="disk">61%</span>
-            </li>
-          </ul>
+          <div class="sysgrid stagger-item" id="sysgrid">
 
-          <p class="panel__hint mono stagger-item">yes, these are real stats !</p>
+            <div class="syscell syscell--cpu">
+              <div class="syscell__top">
+                <span class="syscell__icon mono" aria-hidden="true">▣</span>
+                <span class="syscell__label mono">cpu</span>
+                <span class="syscell__val mono" data-val="cpu">14%</span>
+              </div>
+              <div class="syscell__graph" id="cpuGraph" role="img" aria-label="CPU usage history"></div>
+              <div class="syscell__foot mono">
+                <span class="dim">load</span>
+                <span id="loadVal">--</span>
+              </div>
+            </div>
+
+            <div class="syscell syscell--mem">
+              <div class="syscell__top">
+                <span class="syscell__icon mono" aria-hidden="true">◧</span>
+                <span class="syscell__label mono">memory</span>
+              </div>
+              <div class="syscell__subrow">
+                <span class="syscell__subrow-label mono">ram</span>
+                <span class="syscell__bar"><span class="syscell__fill" data-fill="ram" style="width:37%"></span></span>
+                <span class="syscell__subrow-val mono" data-val="ram">37%</span>
+              </div>
+              <div class="syscell__subrow">
+                <span class="syscell__subrow-label mono">swap</span>
+                <span class="syscell__bar"><span class="syscell__fill" data-fill="swap" style="width:0%"></span></span>
+                <span class="syscell__subrow-val mono" data-val="swap">0%</span>
+              </div>
+              <div class="syscell__foot mono" id="ramSub">-- / -- gb</div>
+            </div>
+
+            <div class="syscell syscell--disk">
+              <div class="syscell__top">
+                <span class="syscell__icon mono" aria-hidden="true">▤</span>
+                <span class="syscell__label mono">disk</span>
+                <span class="syscell__val mono" data-val="disk">61%</span>
+              </div>
+              <span class="syscell__bar syscell__bar--wide"><span class="syscell__fill" data-fill="disk" style="width:61%"></span></span>
+              <div class="syscell__foot mono" id="diskSub">-- / -- gb</div>
+            </div>
+
+            <div class="syscell syscell--net">
+              <div class="syscell__top">
+                <span class="syscell__icon mono" aria-hidden="true">▲▼</span>
+                <span class="syscell__label mono">network</span>
+              </div>
+              <div class="syscell__netrow mono">
+                <span class="syscell__netarrow" aria-hidden="true">↑</span>
+                <span id="netSent">-- mb/s</span>
+              </div>
+              <div class="syscell__netrow mono">
+                <span class="syscell__netarrow" aria-hidden="true">↓</span>
+                <span id="netRecv">-- mb/s</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- <p class="panel__hint mono stagger-item">yes, these are real stats!</p> -->
 
           <a class="server-portal-link mono stagger-item" href="/auth/login">
             <span>if you're on LAN, visit the tools portal!</span>
@@ -290,7 +328,7 @@
         <header class="view-head">
           <span class="view-head__index mono">05</span>
           <h2 class="view-head__title mono">letter</h2>
-          <span class="view-head__hint mono">writes to my inbox for real</span>
+          <span class="view-head__hint mono">send me a sweet note!</span>
         </header>
 
         <div class="editor" id="letterEditor">
@@ -299,28 +337,40 @@
               <span class="editor__dot" id="editorDot" aria-hidden="true"></span>
               letter.txt
             </span>
+            <span class="editor__tabs-spacer"></span>
+            <span class="editor__stat" id="letterStat" aria-live="polite">
+              <span class="editor__stat-num" id="letterStatNum">···</span>
+              <span class="editor__stat-label">letters received</span>
+            </span>
           </div>
 
           <div class="editor__body">
-            <div class="editor__gutter mono" id="editorGutter" aria-hidden="true">1</div>
-            <div class="editor__field">
+            <div class="editor__field" id="editorField">
               <label class="sr-only" for="letterFrom">your name</label>
-              <input class="editor__from mono" id="letterFrom" type="text" placeholder="from: (optional)" autocomplete="name">
+              <div class="editor__from-wrap">
+                <input class="editor__from mono" id="letterFrom" type="text" placeholder="from: (optional)" autocomplete="name">
+                <div class="editor__glitch editor__glitch--from mono" id="editorGlitchFrom" aria-hidden="true"></div>
+              </div>
               <label class="sr-only" for="letterBody">letter</label>
-              <textarea class="editor__textarea mono" id="letterBody" placeholder="say whatever you'd like…" rows="10"></textarea>
+              <div class="editor__textarea-wrap">
+                <textarea class="editor__textarea mono" id="letterBody" placeholder="say whatever you'd like…" rows="10"></textarea>
+                <div class="editor__glitch mono" id="editorGlitch" aria-hidden="true"></div>
+              </div>
             </div>
           </div>
 
           <div class="editor__status mono">
-            <span id="editorMode">-- INSERT --</span>
+            <span class="editor__modebadge" id="editorMode" data-mode="normal">NORMAL</span>
+            <span class="editor__pos mono" id="editorPos">1:1</span>
             <span class="dim">·</span>
             <span id="editorCount">0 words</span>
             <span class="editor__spacer"></span>
+            <span class="editor__enc dim">utf-8</span>
             <button class="btn" id="sendLetter" type="button">send letter</button>
           </div>
         </div>
 
-        <p class="editor__confirm mono" id="editorConfirm" role="status" aria-live="polite"></p>
+        <p class="editor__confirm mono" id="editorConfirm" role="status" aria-live="polite"><span class="editor__confirm-text" id="editorConfirmText"></span></p>
       </section>
 
       <section class="tabpanel" role="tabpanel" id="panel-links" aria-labelledby="tab-links" data-view="links" inert>

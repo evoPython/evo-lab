@@ -235,29 +235,119 @@
      SERVER — real metrics, polled only while this view is visible
      ------------------------------------------------------------ */
   let metricsTimer = null;
+  let cpuGraphBuilt = false;
+  const CPU_HISTORY_LEN = 28;
+  const cpuHistory = [];
+
+  function formatRate(bps) {
+    if (bps == null) return '-- b/s';
+    if (bps < 1024) return `${bps.toFixed(0)} b/s`;
+    if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(1)} kb/s`;
+    return `${(bps / (1024 * 1024)).toFixed(2)} mb/s`;
+  }
+
+  function levelClass(val) {
+    if (val == null) return '';
+    if (val >= 85) return 'is-danger';
+    if (val >= 60) return 'is-warn';
+    return '';
+  }
+
+  function setLevel(el, val) {
+    if (!el) return;
+    el.classList.remove('is-warn', 'is-danger');
+    const cls = levelClass(val);
+    if (cls) el.classList.add(cls);
+  }
+
+  function buildCpuGraph() {
+    const graph = document.getElementById('cpuGraph');
+    if (!graph || cpuGraphBuilt) return;
+    graph.innerHTML = '';
+    for (let i = 0; i < CPU_HISTORY_LEN; i++) {
+      const bar = document.createElement('span');
+      bar.className = 'syscell__graph-bar';
+      graph.appendChild(bar);
+    }
+    cpuGraphBuilt = true;
+  }
+
+  function renderCpuGraph() {
+    const graph = document.getElementById('cpuGraph');
+    if (!graph) return;
+    buildCpuGraph();
+    const bars = graph.children;
+    const offset = CPU_HISTORY_LEN - cpuHistory.length;
+    for (let i = 0; i < bars.length; i++) {
+      const bar = bars[i];
+      const val = cpuHistory[i - offset];
+      if (val == null) {
+        bar.style.height = '4%';
+        bar.classList.remove('is-warn', 'is-danger');
+        continue;
+      }
+      bar.style.height = Math.max(val, 4) + '%';
+      setLevel(bar, val);
+    }
+  }
 
   async function fetchMetrics() {
-    const fills = document.querySelectorAll('[data-metric]');
     const uptimeEl = document.getElementById('uptimeVal');
+    const procEl = document.getElementById('procVal');
+    const loadEl = document.getElementById('loadVal');
+    const ramSubEl = document.getElementById('ramSub');
+    const diskSubEl = document.getElementById('diskSub');
+    const netSentEl = document.getElementById('netSent');
+    const netRecvEl = document.getElementById('netRecv');
 
     try {
       const res = await fetch('/dashboard/api/public-stats');
       if (!res.ok) return;
       const data = await res.json();
-      const state = { cpu: data.cpu, ram: data.ram, disk: data.disk };
 
-      fills.forEach((fill) => {
-        const key = fill.dataset.metric;
-        if (!(key in state) || state[key] == null) return;
-        const val = Math.round(state[key]);
-        fill.style.width = val + '%';
-        const valEl = document.querySelector(`[data-metric-val="${key}"]`);
-        if (valEl) valEl.textContent = val + '%';
-        const bar = fill.closest('.meters__bar');
-        if (bar) bar.setAttribute('aria-label', `${key.toUpperCase()} usage ${val} percent`);
+      // CPU: big number + rolling sparkline
+      const cpuVal = Math.round(data.cpu);
+      const cpuValEl = document.querySelector('[data-val="cpu"]');
+      if (cpuValEl) {
+        cpuValEl.textContent = cpuVal + '%';
+        setLevel(cpuValEl, cpuVal);
+      }
+      cpuHistory.push(cpuVal);
+      if (cpuHistory.length > CPU_HISTORY_LEN) cpuHistory.shift();
+      renderCpuGraph();
+
+      if (loadEl && data.load) {
+        loadEl.textContent = `${data.load['1m']} · ${data.load['5m']} · ${data.load['15m']}`;
+      } else if (loadEl) {
+        loadEl.textContent = 'n/a';
+      }
+
+      // RAM + swap, stacked bars in one card
+      ['ram', 'swap'].forEach((key) => {
+        const val = Math.round(data[key]);
+        const fill = document.querySelector(`[data-fill="${key}"]`);
+        const valEl = document.querySelector(`[data-val="${key}"]`);
+        if (fill) { fill.style.width = val + '%'; setLevel(fill, val); }
+        if (valEl) { valEl.textContent = val + '%'; }
       });
+      if (ramSubEl) ramSubEl.textContent = `${data.ram_used_gb} / ${data.ram_total_gb} gb`;
+
+      // Disk
+      const diskVal = Math.round(data.disk);
+      const diskFill = document.querySelector('[data-fill="disk"]');
+      const diskValEl = document.querySelector('[data-val="disk"]');
+      if (diskFill) { diskFill.style.width = diskVal + '%'; setLevel(diskFill, diskVal); }
+      if (diskValEl) { diskValEl.textContent = diskVal + '%'; setLevel(diskValEl, diskVal); }
+      if (diskSubEl) diskSubEl.textContent = `${data.disk_used_gb} / ${data.disk_total_gb} gb`;
+
+      // Network throughput — auto-scaled unit so small traffic (like
+      // this very polling request) still reads as something other
+      // than a flat "0.00 mb/s"
+      if (netSentEl) netSentEl.textContent = formatRate(data.net_sent_bps);
+      if (netRecvEl) netRecvEl.textContent = formatRate(data.net_recv_bps);
 
       if (uptimeEl && data.uptime) uptimeEl.textContent = `uptime ${data.uptime}`;
+      if (procEl && data.processes) procEl.textContent = `${data.processes} proc`;
     } catch (err) {
       // server unreachable — just leave the last known values on screen
     }
@@ -307,93 +397,347 @@
   /* ------------------------------------------------------------
      LETTER — a tiny editor, not a corporate form
      ------------------------------------------------------------ */
+  const GLITCH_CHARS = '!@#$%^&*<>[]{}/\\|_-=+~?01'.split('');
+
   function initLetter() {
     const body = document.getElementById('letterBody');
     const from = document.getElementById('letterFrom');
-    const gutter = document.getElementById('editorGutter');
+    const field = document.getElementById('editorField');
+    const glitch = document.getElementById('editorGlitch');
+    const glitchFrom = document.getElementById('editorGlitchFrom');
     const mode = document.getElementById('editorMode');
+    const pos = document.getElementById('editorPos');
     const count = document.getElementById('editorCount');
     const dot = document.getElementById('editorDot');
     const sendBtn = document.getElementById('sendLetter');
     const confirm = document.getElementById('editorConfirm');
+    const confirmText = document.getElementById('editorConfirmText');
+    const statNum = document.getElementById('letterStatNum');
     if (!body) return;
 
-    function updateGutter() {
-      const lines = Math.max(1, body.value.split('\n').length);
-      gutter.textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
-    }
+    let currentTotal = null;
 
+    /* ---- statusline: word count + row:col, vim-flavored ---- */
     function updateCount() {
       const words = body.value.trim() ? body.value.trim().split(/\s+/).length : 0;
       count.textContent = `${words} word${words === 1 ? '' : 's'}`;
     }
 
+    function updatePos() {
+      const value = body.value;
+      const idx = body.selectionStart;
+      const upTo = value.slice(0, idx);
+      const row = upTo.split('\n').length;
+      const col = idx - upTo.lastIndexOf('\n');
+      pos.textContent = `${row}:${col}`;
+    }
+
+    function setMode(state) {
+      // state: 'normal' | 'insert' | 'sending' | 'sent'
+      mode.dataset.mode = state;
+      mode.textContent = state.toUpperCase();
+    }
+
+    /* ---- status line message: fades the old message out, then fades
+       the new one in while sliding up from below, instead of an
+       instant text swap ---- */
+    let statusTimer = null;
+    function setStatus(text, colorVar) {
+      clearTimeout(statusTimer);
+      const swap = () => {
+        confirmText.textContent = text || '';
+        confirmText.style.color = colorVar || '';
+        if (!text) { confirmText.classList.remove('is-entering', 'is-leaving'); return; }
+        confirmText.classList.add('is-entering');
+        confirmText.classList.remove('is-leaving');
+        // force layout so the entering state (translated + transparent)
+        // is committed before we transition it back to rest
+        void confirmText.offsetWidth;
+        requestAnimationFrame(() => confirmText.classList.remove('is-entering'));
+      };
+      if (!confirmText.textContent.trim()) { swap(); return; }
+      confirmText.classList.add('is-leaving');
+      statusTimer = setTimeout(swap, 220);
+    }
+
     function markDirty() {
       const hasContent = body.value.trim() || from.value.trim();
       dot.classList.toggle('is-dirty', Boolean(hasContent));
-      dot.classList.remove('is-sent');
+      dot.classList.remove('is-sent', 'is-sending');
       sendBtn.disabled = false;
-      confirm.textContent = '';
+      clearTimeout(statusTimer);
+      confirmText.classList.remove('is-entering', 'is-leaving');
+      confirmText.textContent = '';
     }
 
-    body.addEventListener('input', () => { updateGutter(); updateCount(); markDirty(); });
+    body.addEventListener('input', () => { updateCount(); updatePos(); markDirty(); });
+    body.addEventListener('click', updatePos);
+    body.addEventListener('keyup', updatePos);
     from.addEventListener('input', markDirty);
-    body.addEventListener('focus', () => (mode.textContent = '-- INSERT --'));
-    body.addEventListener('blur', () => (mode.textContent = '-- NORMAL --'));
+    body.addEventListener('focus', () => setMode('insert'));
+    body.addEventListener('blur', () => { if (mode.dataset.mode === 'insert') setMode('normal'); });
+
+    /* ---- live "letters received" counter, animated on load ---- */
+    function animateCount(el, fromVal, toVal, duration = 900) {
+      const startTime = performance.now();
+      const diff = toVal - fromVal;
+      if (diff === 0) { el.textContent = toVal.toLocaleString(); return; }
+      el.classList.add('is-bumping');
+      function tick(now) {
+        const t = Math.min(1, (now - startTime) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = Math.round(fromVal + diff * eased).toLocaleString();
+        if (t < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          el.textContent = toVal.toLocaleString();
+          setTimeout(() => el.classList.remove('is-bumping'), 300);
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    async function loadInitialCount() {
+      try {
+        const res = await fetch('/letters/count');
+        const data = await res.json().catch(() => ({}));
+        if (typeof data.total === 'number') {
+          currentTotal = data.total;
+          animateCount(statNum, 0, currentTotal, 1100);
+        } else {
+          statNum.textContent = '—';
+        }
+      } catch (err) {
+        statNum.textContent = '—';
+      }
+    }
+
+    /* ---- device info: same handful of values any analytics script
+       would see (platform/language/screen/timezone), self-reported by
+       the browser, sent along only when a letter is actually sent ---- */
+    function collectDeviceInfo() {
+      let screenInfo = '';
+      try { screenInfo = `${screen.width}x${screen.height}`; } catch (err) { /* ignore */ }
+      let timezone = '';
+      try { timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (err) { /* ignore */ }
+      return {
+        platform: navigator.platform || '',
+        language: navigator.language || '',
+        screen: screenInfo,
+        timezone,
+      };
+    }
+
+    /* ---- the send animation: characters scramble and fade in a wave
+       that sweeps right-to-left within each line, with each line
+       (top line first — flip LINE_DIRECTION to -1 for bottom-first)
+       starting a little after the one before it. The "from" field, if
+       filled in, is treated as the topmost line and animates too. The
+       whole thing runs slower the longer the letter is. ---- */
+    const LINE_DIRECTION = 1; // 1 = top-to-bottom stagger, -1 = bottom-to-top
+
+    function buildGlitchSpans(container, text) {
+      container.innerHTML = '';
+      if (!text) return { spans: [], lineCount: 0 };
+      const lines = text.split('\n');
+      const spans = [];
+      lines.forEach((line, li) => {
+        let col = 0;
+        for (const ch of line) {
+          const span = document.createElement('span');
+          span.className = 'editor__glitch-char';
+          span.textContent = ch;
+          span.dataset.orig = ch;
+          span.dataset.col = col;
+          span.dataset.line = li;
+          container.appendChild(span);
+          spans.push(span);
+          col++;
+        }
+        if (li < lines.length - 1) container.appendChild(document.createElement('br'));
+      });
+      return { spans, lineCount: lines.length };
+    }
+
+    /* ---- as the erase wave moves through the lines, slowly scroll
+       the overlay to follow it — so on a long letter, lines that were
+       below the fold drift into view right as they're about to go ---- */
+    function followScroll(container, duration) {
+      const maxScroll = container.scrollHeight - container.clientHeight;
+      if (maxScroll <= 1) return;
+      const start = performance.now();
+      function tick(now) {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = t * t * (3 - 2 * t); // smoothstep, gentler than linear
+        container.scrollTop = eased * maxScroll;
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function scrambleAndErase(spans, totalLines, scrollEl) {
+      return new Promise((resolve) => {
+        if (!spans.length) { resolve(); return; }
+        const timers = [];
+
+        // longer letters get a slower, more drawn-out animation
+        const charCount = spans.filter((s) => s.dataset.orig.trim()).length;
+        const lengthScale = Math.min(1 + Math.max(charCount - 20, 0) / 90, 2.4);
+
+        const scrambleSpread = 550 * lengthScale;  // scramble wave sweep time, within a line
+        const lineStagger = 80 * lengthScale;       // extra delay added per line
+        const eraseOffset = 240 * lengthScale;      // gap before the erase wave starts, so it overlaps the scramble wave
+        const eraseSpread = 550 * lengthScale;       // erase wave sweep time, within a line
+        const fadeDuration = Math.min(480 * lengthScale, 900); // per-character fade-out length
+
+        const maxColByLine = {};
+        spans.forEach((s) => {
+          const li = s.dataset.line;
+          const c = Number(s.dataset.col) || 0;
+          maxColByLine[li] = Math.max(maxColByLine[li] || 0, c);
+        });
+
+        const lineOrder = LINE_DIRECTION === 1
+          ? (li) => li
+          : (li) => (totalLines - 1 - li);
+
+        spans.forEach((span) => {
+          const line = Number(span.dataset.line);
+          const col = Number(span.dataset.col) || 0;
+          const maxCol = maxColByLine[span.dataset.line] || 1;
+          const colFrac = col / maxCol; // 1 = rightmost, 0 = leftmost, within its own line
+          const lineDelay = lineOrder(line) * lineStagger;
+
+          const scrambleDelay = lineDelay + (1 - colFrac) * scrambleSpread + Math.random() * 60;
+          const eraseDelay = lineDelay + eraseOffset + (1 - colFrac) * eraseSpread + Math.random() * 60;
+          const stopDelay = eraseDelay + fadeDuration;
+
+          if (span.dataset.orig.trim()) {
+            let iv = null;
+            timers.push(setTimeout(() => {
+              span.classList.add('is-scrambling');
+              iv = setInterval(() => {
+                span.textContent = GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)];
+              }, 45);
+            }, scrambleDelay));
+            timers.push(setTimeout(() => { if (iv) clearInterval(iv); }, stopDelay));
+          }
+
+          timers.push(setTimeout(() => {
+            span.style.animationDuration = `${fadeDuration}ms`;
+            span.classList.add('is-erasing');
+          }, eraseDelay));
+        });
+
+        const totalDuration = (totalLines - 1) * lineStagger + eraseOffset + eraseSpread + fadeDuration + 120;
+        if (scrollEl) followScroll(scrollEl, totalDuration);
+        timers.push(setTimeout(resolve, totalDuration));
+      });
+    }
 
     sendBtn.addEventListener('click', async () => {
       const name = from.value.trim();
       const message = body.value.trim();
       if (!message) {
-        confirm.textContent = 'write something first — even one line is fine.';
-        confirm.style.color = 'var(--text-dim)';
+        setStatus('write something first?', 'var(--text-dim)');
         body.focus();
         return;
       }
 
       sendBtn.disabled = true;
-      confirm.style.color = 'var(--text-dim)';
-      confirm.textContent = 'sending…';
+      from.disabled = true;
+      body.disabled = true;
+      setMode('sending');
+      dot.classList.remove('is-dirty', 'is-sent');
+      dot.classList.add('is-sending');
 
+      // "from" is the topmost line if present; the letter body follows it
+      const fromResult = buildGlitchSpans(glitchFrom, from.value);
+      const bodyResult = buildGlitchSpans(glitch, body.value);
+      bodyResult.spans.forEach((s) => { s.dataset.line = Number(s.dataset.line) + fromResult.lineCount; });
+      const totalLines = fromResult.lineCount + bodyResult.lineCount;
+      const allSpans = [...fromResult.spans, ...bodyResult.spans];
+
+      if (fromResult.spans.length) glitchFrom.classList.add('is-active');
+      glitch.classList.add('is-active');
+      from.classList.add('is-sending');
+      body.classList.add('is-sending');
+
+      setStatus('sending…', 'var(--warn)');
+      const animationDone = scrambleAndErase(allSpans, totalLines, glitch);
+
+      let res, data, networkError = null;
       try {
-        const res = await fetch('/letters/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, body: message }),
-        });
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          confirm.style.color = 'var(--text-dim)';
-          confirm.textContent = data.error || 'that didn\u2019t go through — try again in a bit.';
-          sendBtn.disabled = false;
-          return;
-        }
-
-        dot.classList.remove('is-dirty');
-        dot.classList.add('is-sent');
-        confirm.style.color = 'var(--ok)';
-        confirm.textContent = name
-          ? `sent — thanks, ${name}. it's in the inbox now.`
-          : 'sent — it\u2019s in the inbox now.';
-
-        setTimeout(() => {
-          body.value = '';
-          from.value = '';
-          updateGutter();
-          updateCount();
-          sendBtn.disabled = false;
-          dot.classList.remove('is-sent');
-        }, 2200);
+        [res] = await Promise.all([
+          fetch('/letters/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, body: message, device: collectDeviceInfo() }),
+          }),
+          animationDone,
+        ]);
+        data = await res.json().catch(() => ({}));
       } catch (err) {
-        confirm.style.color = 'var(--text-dim)';
-        confirm.textContent = 'network hiccup — try again.';
-        sendBtn.disabled = false;
+        networkError = err;
+        await animationDone;
       }
+
+      glitch.classList.remove('is-active');
+      glitchFrom.classList.remove('is-active');
+      glitch.scrollTop = 0;
+      dot.classList.remove('is-sending');
+      from.disabled = false;
+      body.disabled = false;
+
+      if (networkError || !res || !res.ok) {
+        body.classList.remove('is-sending');
+        from.classList.remove('is-sending');
+        setMode('normal');
+        dot.classList.add('is-dirty');
+        setStatus(
+          networkError
+            ? 'network hiccup — try again.'
+            : ((data && data.error) || 'that didn\u2019t go through — try again in a bit.'),
+          'var(--text-dim)'
+        );
+        sendBtn.disabled = false;
+        return;
+      }
+
+      // clear the real fields before they're revealed again, so they
+      // come back empty instead of flashing the old text before it's wiped
+      body.value = '';
+      from.value = '';
+      updateCount();
+      updatePos();
+      body.classList.remove('is-sending');
+      from.classList.remove('is-sending');
+
+      setMode('sent');
+      dot.classList.add('is-sent');
+      setStatus(
+        name ? `thanks, ${name}!` : 'sent!',
+        'var(--ok)'
+      );
+
+      if (typeof data.total === 'number' && currentTotal !== null) {
+        animateCount(statNum, currentTotal, data.total, 700);
+        currentTotal = data.total;
+      } else if (typeof data.total === 'number') {
+        currentTotal = data.total;
+        statNum.textContent = currentTotal.toLocaleString();
+      }
+
+      setTimeout(() => {
+        sendBtn.disabled = false;
+        dot.classList.remove('is-sent');
+        setMode('normal');
+      }, 1800);
     });
 
-    updateGutter();
     updateCount();
+    updatePos();
+    loadInitialCount();
   }
 
   /* ------------------------------------------------------------

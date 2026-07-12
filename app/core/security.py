@@ -1,6 +1,19 @@
+import hashlib
 from functools import wraps
 
-from flask import session, abort
+from flask import session, abort, current_app
+
+
+def _root_password_fingerprint():
+    """
+    Short, non-reversible fingerprint of the currently configured root
+    password. Used to tie a root session to the password that was active
+    when the user logged in, so that changing ROOT_PASSWORD in .env (and
+    restarting the app) invalidates any sessions issued under the old
+    password, even if that browser never explicitly logs out.
+    """
+    expected = current_app.config.get("ROOT_PASSWORD") or ""
+    return hashlib.sha256(expected.encode("utf-8")).hexdigest()
 
 
 def is_personal_device():
@@ -9,7 +22,17 @@ def is_personal_device():
     (controls, tools, niri, media, launcher). Now backed by the root
     login session instead of a device-pairing cookie.
     """
-    return bool(session.get("is_root"))
+    if not session.get("is_root"):
+        return False
+
+    # If the root password has since changed, this session was issued
+    # under a stale password and should no longer grant access.
+    if session.get("root_pw_fp") != _root_password_fingerprint():
+        session.pop("is_root", None)
+        session.pop("root_pw_fp", None)
+        return False
+
+    return True
 
 
 def require_personal_device(view):

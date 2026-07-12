@@ -1,3 +1,4 @@
+import os
 import socket
 import time
 
@@ -8,15 +9,24 @@ import psutil
 # system boot, not process start.
 BOOT_TIME = psutil.boot_time()
 
+# Baseline sample for network throughput. Rates are derived from the
+# delta between calls, so we need a starting point captured at import
+# time rather than assuming the first call's counters are a rate.
+_last_net_io = psutil.net_io_counters()
+_last_net_time = time.time()
+
 
 def get_system_stats():
 
     return {
         "cpu": get_cpu(),
         "ram": get_ram(),
+        "swap": get_swap(),
         "battery": get_battery(),
         "disk": get_disk(),
         "network": get_network(),
+        "load": get_load_avg(),
+        "processes": get_process_count(),
         "uptime": get_uptime(),
     }
 
@@ -70,6 +80,17 @@ def get_ram():
     }
 
 
+def get_swap():
+
+    swap = psutil.swap_memory()
+
+    return {
+        "percent": swap.percent,
+        "used_gb": round(swap.used / (1024 ** 3), 2),
+        "total_gb": round(swap.total / (1024 ** 3), 2),
+    }
+
+
 def get_battery():
 
     battery = psutil.sensors_battery()
@@ -101,6 +122,8 @@ def get_disk():
 
 def get_network():
 
+    global _last_net_io, _last_net_time
+
     io_counters = psutil.net_io_counters()
     addrs = psutil.net_if_addrs()
 
@@ -112,11 +135,40 @@ def get_network():
             if addr.family == socket.AF_INET:
                 interfaces[name] = addr.address
 
+    now = time.time()
+    elapsed = max(now - _last_net_time, 0.001)
+    sent_rate_bps = max(io_counters.bytes_sent - _last_net_io.bytes_sent, 0) / elapsed
+    recv_rate_bps = max(io_counters.bytes_recv - _last_net_io.bytes_recv, 0) / elapsed
+
+    _last_net_io = io_counters
+    _last_net_time = now
+
     return {
         "interfaces": interfaces,
         "sent_mb": round(io_counters.bytes_sent / (1024 ** 2), 2),
         "recv_mb": round(io_counters.bytes_recv / (1024 ** 2), 2),
+        "sent_rate_bps": round(sent_rate_bps, 1),
+        "recv_rate_bps": round(recv_rate_bps, 1),
     }
+
+
+def get_load_avg():
+    """
+    1/5/15-minute load averages. Not available on Windows, so this
+    fails soft and returns None there.
+    """
+
+    try:
+        one, five, fifteen = os.getloadavg()
+    except (OSError, AttributeError):
+        return None
+
+    return {"1m": round(one, 2), "5m": round(five, 2), "15m": round(fifteen, 2)}
+
+
+def get_process_count():
+
+    return len(psutil.pids())
 
 
 def get_uptime():

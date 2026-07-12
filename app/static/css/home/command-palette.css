@@ -1,0 +1,79 @@
+/* ============================================================
+   COMMAND PALETTE
+   ============================================================ */
+.cmdk-overlay {
+  position: fixed; inset: 0;
+  background: rgba(6, 7, 9, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 90;
+}
+
+.cmdk {
+  position: fixed;
+  top: 14vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 32px));
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.cmdk__inputrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--accent);
+  font-size: var(--fs-base);
+}
+.cmdk__inputrow input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+}
+.cmdk__inputrow input::placeholder { color: var(--text-faint); }
+
+.cmdk__output {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 6px 16px;
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+}
+.cmdk__output:empty { display: none; }
+.cmdk__output .line { padding: 5px 0; border-bottom: 1px dashed var(--border); }
+.cmdk__output .line:last-child { border-bottom: none; }
+.cmdk__output .line--cmd { color: var(--text-faint); }
+.cmdk__output .line--cmd::before { content: '> '; }
+
+.cmdk__hint {
+  display: flex;
+  gap: 16px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+}
+
+/* duck easter egg */
+.duck {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  font-size: var(--fs-lg);
+  z-index: 120;
+  animation: duckIn 0.4s ease;
+  pointer-events: none;
+}
+@keyframes duckIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+

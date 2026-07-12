@@ -1,0 +1,54 @@
+/* ============================================================
+   EVO.PYTHON — personal server homepage
+   A single-focus workspace: one view at a time, switched with
+   deliberate motion. Flat, quiet, monospace-accented.
+   ============================================================ */
+
+:root {
+  /* --- color: neutrals --- */
+  --bg:            #0b0c0f;
+  --bg-soft:       #0e0f13;
+  --panel:         #131418;
+  --panel-hover:   #17181d;
+  --border:        #232429;
+  --border-strong: #34363e;
+  --text:          #e8e6e1;
+  --text-dim:      #8b8d96;
+  --text-faint:    #54565f;
+
+  /* --- color: accent (calm technical purple) --- */
+  --accent:        #a598ff;
+  --accent-dim:    #9489da;
+  --accent-soft:   rgba(165, 152, 255, 0.12);
+  --accent-soft-2: rgba(165, 152, 255, 0.22);
+
+  /* --- color: secondary accent, used sparingly for "alive" states --- */
+  --ok:            #8fd8ac;
+  --ok-soft:       rgba(143, 216, 172, 0.14);
+  --warn:          #e0b568;
+  --warn-soft:     rgba(224, 181, 104, 0.16);
+  --danger:        #e08a7a;
+
+  /* --- type --- */
+  --font-display: 'Manrope', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* type scale — 3 sizes site-wide (hero title is the one deliberate exception) */
+  --fs-sm:   13px;  /* meta, labels, hints, badges, timestamps */
+  --fs-base: 15px;  /* default body/UI text: paragraphs, nav items, buttons */
+  --fs-lg:   19px;  /* headings, titles, emphasis */
+
+  /* --- shape / rhythm --- */
+  --radius: 6px;
+  --radius-sm: 4px;
+  --header-h: 52px;
+  --tabbar-h: 58px;
+  --sidenav-w: 208px;
+
+  /* --- motion --- */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur: 0.32s;
+
+  color-scheme: dark;
+}
+

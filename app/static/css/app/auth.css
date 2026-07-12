@@ -1,0 +1,68 @@
+/* ============================================================
+   AUTH / LOGIN PAGES
+   ============================================================ */
+.auth-panel {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+.auth-panel h1 {
+  font-family: var(--font-mono);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  color: var(--text-faint);
+  margin-bottom: 20px;
+  transition: color 0.15s ease;
+}
+.back-link:hover, .back-link:focus-visible { color: var(--accent); }
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0b0c0f;
+}
+.btn--primary:hover, .btn--primary:focus-visible {
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+}
+.auth-panel .auth-note {
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+  margin-bottom: 28px;
+  max-width: 52ch;
+}
+.auth-panel form {
+  display: grid;
+  gap: 12px;
+}
+.auth-panel input {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: var(--fs-base);
+  transition: border-color 0.15s ease;
+}
+.auth-panel input:focus {
+  outline: none;
+  border-color: var(--accent-dim);
+}
+.auth-panel button[type="submit"] {
+  justify-self: start;
+}
+.auth-panel .error {
+  font-size: var(--fs-base);
+  color: var(--warn);
+  margin-bottom: 12px;
+}
+

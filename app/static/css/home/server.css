@@ -1,0 +1,198 @@
+/* ============================================================
+   SERVER
+   ============================================================ */
+.server-grid { display: grid; gap: 18px; max-width: 760px; }
+
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+  flex-wrap: wrap;
+}
+.status-line__badge {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--ok);
+  background: var(--ok-soft);
+  border: 1px solid rgba(143, 216, 172, 0.35);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.server-portal-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.server-portal-link:hover, .server-portal-link:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+.server-portal-link__arrow { margin-left: auto; }
+
+/* ---- bento system summary, btop-flavored: one wide CPU panel up
+   top with a live graph, three narrower panels underneath ---- */
+.sysgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-areas:
+    "cpu  cpu  cpu"
+    "mem  disk net";
+  gap: 10px;
+}
+
+.syscell {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s ease;
+}
+.syscell:hover { border-color: var(--border-strong); }
+
+.syscell--cpu  { grid-area: cpu; }
+.syscell--mem  { grid-area: mem; }
+.syscell--disk { grid-area: disk; }
+.syscell--net  { grid-area: net; }
+
+.syscell__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.syscell__icon {
+  flex-shrink: 0;
+  color: var(--accent-dim);
+  font-size: var(--fs-base);
+  line-height: 1;
+}
+.syscell__label {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.syscell__val {
+  margin-left: auto;
+  color: var(--text);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  line-height: 1;
+}
+.syscell__val.is-warn { color: var(--warn); }
+.syscell__val.is-danger { color: var(--danger); }
+
+.syscell__foot {
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+  display: flex;
+  gap: 6px;
+}
+
+/* CPU: live sparkline of recent samples */
+.syscell--cpu { padding-bottom: 10px; }
+.syscell__graph {
+  height: 46px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+}
+.syscell__graph-bar {
+  flex: 1 1 auto;
+  min-width: 2px;
+  height: 4%;
+  background: var(--accent-dim);
+  border-radius: 1px 1px 0 0;
+  transition: height 0.4s var(--ease), background 0.3s ease;
+}
+.syscell__graph-bar.is-warn { background: var(--warn); }
+.syscell__graph-bar.is-danger { background: var(--danger); }
+
+/* thin usage bars, shared by mem/disk rows */
+.syscell__bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  display: block;
+  flex: 1 1 auto;
+}
+.syscell__bar--wide { margin-top: 2px; }
+.syscell__fill {
+  display: block;
+  height: 100%;
+  background: var(--accent-dim);
+  border-radius: 999px;
+  transition: width 0.6s ease, background 0.3s ease;
+}
+.syscell__fill.is-warn { background: var(--warn); }
+.syscell__fill.is-danger { background: var(--danger); }
+
+.syscell__subrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-sm);
+}
+.syscell__subrow-label {
+  width: 34px;
+  flex-shrink: 0;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.syscell__subrow-val {
+  width: 34px;
+  flex-shrink: 0;
+  text-align: right;
+  color: var(--text-dim);
+}
+
+/* network: up/down rows instead of a percent bar */
+.syscell__netrow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+}
+.syscell__netarrow {
+  color: var(--accent-dim);
+  width: 12px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .sysgrid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-areas:
+      "cpu  cpu"
+      "mem  disk"
+      "net  net";
+  }
+}
+
+@media (max-width: 420px) {
+  .sysgrid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "cpu"
+      "mem"
+      "disk"
+      "net";
+  }
+}
+

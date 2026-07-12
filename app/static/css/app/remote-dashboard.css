@@ -1,0 +1,166 @@
+/* ============================================================
+   REMOTE DASHBOARD
+   ============================================================ */
+.rc-shell {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 32px clamp(16px, 3vw, 40px) 40px;
+}
+.rc-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.rc-head h1 { font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: 700; }
+.rc-status { font-size: var(--fs-base); color: var(--accent); min-height: 1.4em; margin-bottom: 22px; }
+
+.rc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.rc-grid--wide { grid-template-columns: 1fr; }
+@media (max-width: 900px) { .rc-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .rc-grid { grid-template-columns: 1fr; } }
+
+.rc-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rc-panel--span2 { grid-column: span 2; }
+.rc-panel--span3 { grid-column: 1 / -1; }
+@media (max-width: 900px) { .rc-panel--span2, .rc-panel--span3 { grid-column: 1 / -1; } }
+
+.rc-panel h2 {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.rc-panel__value { font-size: var(--fs-base); color: var(--text-dim); font-family: var(--font-mono); }
+
+.rc-btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
+.rc-btnrow .btn { padding: 8px 14px; }
+
+.rc-search {
+  width: 100%;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: var(--fs-base);
+  font-family: var(--font-mono);
+}
+.rc-search:focus { outline: none; border-color: var(--accent-dim); }
+
+.rc-applist {
+  display: grid;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.rc-applist li {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.rc-applist li:hover { background: var(--panel-hover); color: var(--text); }
+
+.rc-media-row { display: flex; gap: 8px; }
+
+.rc-video-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.rc-video-row video, .rc-media-preview img {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  max-width: 220px;
+  background: var(--bg-soft);
+}
+
+.rc-screen-wrap {
+  position: relative;
+  display: inline-block;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  max-width: 100%;
+}
+.rc-screen-wrap img { display: block; max-width: 100%; max-height: 320px; }
+.rc-viewport-outline {
+  position: absolute;
+  border: 2px solid var(--accent);
+  pointer-events: none;
+}
+
+.rc-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+}
+
+.rc-ws-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  max-height: 260px;
+}
+.rc-ws-col {
+  flex: none;
+  min-width: 190px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rc-ws-col.is-active { border-color: var(--accent-dim); background: var(--accent-soft); }
+.rc-ws-col__head {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+}
+.rc-ws-col.is-active .rc-ws-col__head { color: var(--accent); }
+.rc-ws-wins { display: flex; flex-wrap: wrap; gap: 4px; }
+.rc-win-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  padding: 4px 6px;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+.rc-win-box.is-focused { border-color: var(--accent); color: var(--text); }
+.rc-win-box.is-floating { background: var(--panel-hover); }
+
+#ctx-menu {
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  overflow: hidden;
+  font-size: var(--fs-base);
+}
+#ctx-menu > div { color: var(--text-dim); transition: background 0.12s ease; }
+#ctx-menu > div:hover { background: var(--panel-hover); color: var(--text); }
+

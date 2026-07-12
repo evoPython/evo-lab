@@ -1,0 +1,77 @@
+/* ============================================================
+   GENERIC PAGE SHELL
+   ============================================================ */
+.page-shell {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px clamp(20px, 4vw, 56px) 40px;
+}
+.page-shell h1 {
+  font-family: var(--font-mono);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 14px;
+}
+.page-shell p, .page-shell li {
+  color: var(--text-dim);
+  font-size: var(--fs-base);
+}
+.page-shell p { margin-bottom: 10px; }
+.page-shell ul { list-style: none; padding: 0; display: grid; gap: 8px; }
+.page-shell li a {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  color: var(--text);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.page-shell li a:hover, .page-shell li a:focus-visible {
+  border-color: var(--accent-dim);
+  background: var(--accent-soft);
+}
+.page-shell .auth-gate {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.page-shell .auth-gate p {
+  margin: 0 0 12px;
+  color: var(--text-dim);
+}
+.page-shell .form-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.page-shell input[type="text"],
+.page-shell input[type="password"],
+.page-shell input[type="file"] {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: var(--fs-base);
+}
+.page-shell textarea {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  color: var(--text);
+  font-size: var(--fs-base);
+  min-height: 120px;
+}
+.page-shell .h2 {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 24px 0 12px;
+}
+

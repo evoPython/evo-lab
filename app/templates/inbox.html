@@ -18,7 +18,22 @@
         <span class="letterlist__date dim">{{ l.created_at }}</span>
         <span class="dim">·</span>
         <span class="letterlist__ip dim">{{ l.ip }}</span>
+        {% if l.visitor_id %}
+        <span class="dim">·</span>
+        <span class="letterlist__visitor dim" title="{{ l.visitor_id }}">
+          visitor {{ l.visitor_id[:8] }}{% if l.visitor_letters_sent and l.visitor_letters_sent > 1 %} · {{ l.visitor_letters_sent }} letters from this visitor{% endif %}
+        </span>
+        {% endif %}
       </div>
+      {% if l.visitor_id and (l.visitor_platform or l.visitor_screen or l.visitor_language or l.visitor_timezone or l.visitor_user_agent) %}
+      <p class="letterlist__device dim mono">
+        {{ l.visitor_platform or '?' }}
+        {% if l.visitor_screen %}· {{ l.visitor_screen }}{% endif %}
+        {% if l.visitor_language %}· {{ l.visitor_language }}{% endif %}
+        {% if l.visitor_timezone %}· {{ l.visitor_timezone }}{% endif %}
+        {% if l.visitor_user_agent %}· {{ l.visitor_user_agent }}{% endif %}
+      </p>
+      {% endif %}
       <p class="letterlist__body">{{ l.body }}</p>
       <form method="post" action="/letters/{{ l.id }}/delete" class="letterlist__delete" onsubmit="return confirm('delete this letter?');">
         <button type="submit" class="btn">delete</button>

@@ -1,0 +1,89 @@
+/* ============================================================
+   PROJECTS — file list + preview pane (yazi-style)
+   ============================================================ */
+.filepane {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-height: 300px;
+}
+@media (max-width: 720px) {
+  .filepane { grid-template-columns: 1fr; }
+}
+
+.filelist {
+  border-right: 1px solid var(--border);
+  padding: 6px;
+}
+@media (max-width: 720px) { .filelist { border-right: none; border-bottom: 1px solid var(--border); } }
+
+.filelist__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.filelist__item:hover { background: var(--panel-hover); color: var(--text); }
+.filelist__item.is-selected {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.filelist__icon {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.filelist__item.is-selected .filelist__icon { color: var(--accent); transform: rotate(90deg); }
+.filelist__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filelist__tag {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+@media (max-width: 480px) {
+  .filelist__item { min-height: 44px; padding: 10px 12px; }
+}
+
+.filepreview {
+  padding: 22px 24px;
+  color: var(--text-dim);
+  font-size: var(--fs-base);
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+.filepreview__name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  color: var(--text);
+}
+.filepreview__desc { max-width: 52ch; }
+.filepreview__links {
+  display: flex;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+}
+.filepreview__links a { color: var(--accent); }
+.filepreview__links a:hover { text-decoration: underline; }
+
+/* fade the preview content in when the selection changes */
+.filepreview[data-swap] > * { animation: fadeUp 0.28s var(--ease) both; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+

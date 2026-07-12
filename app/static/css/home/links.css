@@ -1,0 +1,41 @@
+/* ============================================================
+   LINKS
+   ============================================================ */
+.linkgrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  max-width: 640px;
+}
+@media (max-width: 560px) { .linkgrid { grid-template-columns: 1fr; } }
+
+.linkchip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+.linkchip:hover, .linkchip:focus-visible {
+  border-color: var(--accent-dim);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+.linkchip__glyph {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-base);
+}
+.linkchip__label { color: var(--accent); font-size: var(--fs-base); font-weight: 600; }
+.linkchip__desc { color: var(--text-faint); font-size: var(--fs-base); }
+.linkchip__text { display: flex; flex-direction: column; gap: 2px; }
+

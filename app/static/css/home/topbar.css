@@ -1,0 +1,41 @@
+/* ============================================================
+   TOP BAR
+   ============================================================ */
+.topbar {
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.topbar__left { display: flex; align-items: baseline; gap: 12px; }
+.topbar__id { font-size: var(--fs-base); letter-spacing: 0.01em; flex-shrink: 0; }
+.topbar__tagline { font-size: var(--fs-sm); }
+@media (max-width: 640px) { .topbar__tagline { display: none; } }
+
+.topbar__right { display: flex; align-items: center; gap: 14px; }
+.topbar__greet { font-size: var(--fs-base); color: var(--text-dim); }
+.topbar__clock { font-size: var(--fs-base); color: var(--text-faint); }
+@media (max-width: 640px) {
+  .topbar__greet { display: none; }
+  .topbar__clock { font-size: var(--fs-sm); }
+}
+
+.cmdk-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 8px 5px 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.cmdk-trigger:hover, .cmdk-trigger:focus-visible { color: var(--text); border-color: var(--border-strong); }
+

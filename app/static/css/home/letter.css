@@ -1,0 +1,252 @@
+/* ============================================================
+   LETTER — a small text editor, not a corporate form
+   ============================================================ */
+.editor {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  max-width: 640px;
+  background: var(--bg-soft);
+}
+
+/* faint scanlines — just enough to read as "terminal", not enough to distract */
+.editor::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.012) 0px,
+    rgba(255, 255, 255, 0.012) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+}
+
+.editor__tabs {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+.editor__tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: var(--fs-base);
+  color: var(--text);
+  border-bottom: 2px solid var(--accent);
+}
+.editor__dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.editor__dot.is-dirty { background: var(--warn); }
+.editor__dot.is-sending {
+  background: var(--warn);
+  box-shadow: 0 0 0 0 var(--warn-soft);
+  animation: dot-pulse 0.9s ease-in-out infinite;
+}
+.editor__dot.is-sent { background: var(--ok); }
+@keyframes dot-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--warn-soft); }
+  70%  { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.editor__tabs-spacer { flex: 1; }
+
+.editor__stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0 16px;
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.editor__stat-num {
+  color: var(--accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: text-shadow 0.4s ease;
+}
+.editor__stat-num.is-bumping {
+  text-shadow: 0 0 12px var(--accent-soft-2);
+}
+@media (max-width: 480px) { .editor__stat-label { display: none; } }
+
+.editor__body {
+  position: relative;
+  display: flex;
+}
+
+.editor__field {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.editor__from-wrap {
+  position: relative;
+}
+.editor__from {
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  font-size: var(--fs-base);
+  color: var(--accent);
+  width: 100%;
+  transition: opacity 0.2s ease;
+}
+.editor__from::placeholder { color: var(--text-faint); }
+.editor__from:focus { outline: none; background: var(--panel-hover); }
+.editor__from:disabled { opacity: 0.5; }
+.editor__from.is-sending { opacity: 0; pointer-events: none; }
+
+.editor__glitch--from {
+  padding: 12px 16px;
+  color: var(--accent);
+  white-space: pre;
+}
+
+.editor__textarea-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+
+.editor__textarea {
+  flex: 1;
+  background: none;
+  border: none;
+  resize: vertical;
+  padding: 14px 16px;
+  font-size: var(--fs-base);
+  line-height: 1.7;
+  color: var(--text);
+  caret-color: var(--accent);
+  min-height: 200px;
+  transition: opacity 0.2s ease;
+}
+.editor__textarea:focus { outline: none; }
+.editor__textarea::placeholder { color: var(--text-faint); }
+.editor__textarea.is-sending { opacity: 0; pointer-events: none; }
+
+/* The "sending" overlay: sits exactly where the textarea's text sits
+   (scoped to the textarea wrap only, not the "from" row above it),
+   built out of one <span> per character so each one can jumble/glitch
+   and fade independently. Hidden and inert until a send is in flight. */
+.editor__glitch {
+  position: absolute;
+  inset: 0;
+  padding: 14px 16px;
+  font-size: var(--fs-base);
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+.editor__glitch.is-active { opacity: 1; visibility: visible; }
+.editor__glitch-char {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+.editor__glitch-char.is-scrambling { color: var(--accent-dim); }
+.editor__glitch-char.is-erasing {
+  animation: glitch-erase 0.5s ease forwards;
+}
+@keyframes glitch-erase {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.editor__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  row-gap: 6px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+}
+.editor__modebadge {
+  padding: 2px 9px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.03em;
+  background: var(--accent-soft);
+  color: var(--accent);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.editor__modebadge[data-mode="insert"] { background: var(--ok-soft); color: var(--ok); }
+.editor__modebadge[data-mode="normal"] { background: var(--accent-soft); color: var(--accent); }
+.editor__modebadge[data-mode="sending"] { background: var(--accent-soft); color: var(--accent); }
+.editor__modebadge[data-mode="sent"] { background: var(--ok-soft); color: var(--ok); }
+.editor__pos { color: var(--text-faint); font-variant-numeric: tabular-nums; }
+#editorMode { color: var(--accent-dim); }
+.editor__spacer { flex: 1; min-width: 8px; }
+@media (max-width: 400px) {
+  .editor__spacer { flex-basis: 100%; height: 0; }
+}
+.editor__enc { letter-spacing: 0.02em; }
+
+.editor__confirm {
+  margin-top: 14px;
+  font-size: var(--fs-base);
+  color: var(--ok);
+  min-height: 1em;
+  overflow: hidden;
+}
+.editor__confirm-text {
+  display: inline-block;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.22s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.editor__confirm-text.is-leaving {
+  opacity: 0;
+  transform: translateY(0);
+  transition: opacity 0.22s ease;
+}
+.editor__confirm-text.is-entering {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: none;
+}
+
+.btn {
+  border: 1px solid var(--accent-dim);
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 7px 14px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.btn:hover, .btn:focus-visible { background: var(--accent-soft-2); border-color: var(--accent); }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+
