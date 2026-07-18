@@ -73,6 +73,7 @@
   const viewH = () => trackWrapper.clientHeight;
 
   let wasOnScreen = true; // tracks visibility so we can catch the moment it leaves the screen
+  let prevWallLeft = null, prevWallRight = null; // for measuring how fast the walls themselves sweep
 
   function scatterVelocity() {
     const dir = Math.random() * Math.PI * 2;
@@ -113,6 +114,18 @@
     const wallLeft = shift;
     const wallRight = shift + viewW();
 
+    // how fast each wall itself is sweeping this frame (px/s) — a wall
+    // mid-transition can move far faster than the pfp's own velocity,
+    // so on contact we hand the pfp the wall's speed (plus a kick)
+    // rather than just clamping its position frame after frame. That
+    // way it actually leaves with real momentum once the wall stops,
+    // instead of ending up glued exactly at the wall's final resting
+    // spot (which, on the way back to home, was always x = 0).
+    const wallLeftVel = prevWallLeft === null ? 0 : (wallLeft - prevWallLeft) / dt;
+    const wallRightVel = prevWallRight === null ? 0 : (wallRight - prevWallRight) / dt;
+    prevWallLeft = wallLeft;
+    prevWallRight = wallRight;
+
     if (dragging) {
       // dragging still respects the walls — you can't drag it through
       // a panel edge that's mid-slide.
@@ -125,8 +138,16 @@
       x += vx * dt;
       y += vy * dt + Math.sin(bobT * 1.3) * 5 * dt;
 
-      if (x < wallLeft) { x = wallLeft; vx = Math.abs(vx) * 0.82; angVel = -angVel - 40; }
-      if (x + s > wallRight) { x = wallRight - s; vx = -Math.abs(vx) * 0.82; angVel = -angVel - 40; }
+      if (x < wallLeft) {
+        x = wallLeft;
+        vx = Math.max(Math.abs(vx) * 0.82, wallLeftVel + 90);
+        angVel = -angVel - 40;
+      }
+      if (x + s > wallRight) {
+        x = wallRight - s;
+        vx = Math.min(-Math.abs(vx) * 0.82, wallRightVel - 90);
+        angVel = -angVel - 40;
+      }
       if (y < 0) { y = 0; vy = Math.abs(vy) * 0.88; }
       if (y + s > h) { y = h - s; vy = -Math.abs(vy) * 0.88; }
 
