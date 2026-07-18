@@ -1,23 +1,40 @@
 /* ============================================================
    TOP NAV (app shell pages)
+   Mobile-first: a single row that never wraps. Links scroll
+   horizontally when they don't fit; the current-user / login /
+   logout controls stay pinned on the right so they're always
+   reachable without hunting through a wrapped stack.
    ============================================================ */
 .topnav {
-  min-height: 40px;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 18px;
+  align-items: stretch;
+  min-height: 44px;
+  padding: 0 6px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-soft);
-  flex-wrap: wrap;
-  row-gap: 6px;
 }
+
+.topnav__links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-inline: 6px;
+}
+.topnav__links::-webkit-scrollbar { display: none; }
+
 .topnav__item {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
-  font-size: var(--fs-base);
+  flex-shrink: 0;
+  padding: 8px 10px;
+  font-size: var(--fs-sm);
   color: var(--text-dim);
   border-radius: var(--radius-sm);
   transition: color 0.15s ease, background 0.15s ease;
@@ -27,35 +44,35 @@
   color: var(--text);
   background: var(--panel-hover);
 }
+
 .topnav__right {
-  margin-left: auto;
+  flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  margin-left: 4px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+.topnav__user {
+  padding: 0 4px;
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+  white-space: nowrap;
 }
 
-@media (max-width: 640px) {
-  .topnav {
-    padding: 10px 12px;
-    gap: 4px;
-    row-gap: 8px;
-  }
-  .topnav__item {
-    font-size: var(--fs-sm);
-    padding: 9px 10px;
-    min-height: 40px;
-  }
-  .topnav__right {
-    margin-left: 0;
-    width: 100%;
-    justify-content: flex-end;
-    padding-top: 6px;
-    border-top: 1px solid var(--border);
-    margin-top: 2px;
-  }
+/* subtle fade hinting there's more to scroll, without JS */
+.topnav__links {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+}
+
+@media (min-width: 641px) {
+  .topnav { padding: 0 18px; }
+  .topnav__item { font-size: var(--fs-base); padding: 6px 10px; }
+  .topnav__right { padding-left: 14px; margin-left: 8px; }
 }
 
 @media (max-width: 480px) {
   .btn { padding: 10px 16px; }
 }
-

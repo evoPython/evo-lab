@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>{% block title %}evo.ftp.sh{% endblock %}</title>
+
+  <meta name="description" content="{% block description %}evo.ftp.sh app{% endblock %}">
+  <meta name="author" content="evo">
+  <meta name="theme-color" content="#7c5cff">
+  <meta name="color-scheme" content="dark">
+
+  <link rel="icon" href="{{ url_for('static', filename='images/pfp.png') }}">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/app-shell.css') }}">
+</head>
+<body class="app-body">
+  <a class="skip-link" href="#stage">skip to content</a>
+
+  <!-- Mobile overlay -->
+  <div class="app-overlay" id="appOverlay" onclick="closeNav()"></div>
+
+  <!-- Sidebar -->
+  <nav class="app-sidebar" id="appSidebar" aria-label="App navigation">
+    <div class="app-sidebar__header">
+      <a href="/" class="app-sidebar__brand mono">evo<span class="accent-dim">.ftp.sh</span></a>
+    </div>
+    <div class="app-sidebar__links">
+      {% if is_personal %}
+      <a href="/dashboard" class="app-sidebar__item {% if request.path.startswith('/dashboard') %}app-sidebar__item--active{% endif %}">Dashboard</a>
+      <a href="/remote" class="app-sidebar__item {% if request.path.startswith('/remote') %}app-sidebar__item--active{% endif %}">Remote</a>
+      <a href="/tools" class="app-sidebar__item {% if request.path.startswith('/tools') %}app-sidebar__item--active{% endif %}">Tools</a>
+      <a href="/letters/inbox" class="app-sidebar__item {% if request.path.startswith('/letters') %}app-sidebar__item--active{% endif %}">
+        Inbox{% if unread_letters %}<span class="app-sidebar__badge">{{ unread_letters }}</span>{% endif %}
+      </a>
+      {% endif %}
+      {% if is_logged_in or is_personal %}
+      <a href="/cross-remote" class="app-sidebar__item {% if request.path.startswith('/cross-remote') %}app-sidebar__item--active{% endif %}">Cross-Remote</a>
+      {% endif %}
+    </div>
+    <div class="app-sidebar__footer">
+      {% if is_logged_in %}
+      <span class="app-sidebar__user mono">{{ current_user }}</span>
+      {% if not is_personal %}
+      <a href="/auth/root" class="app-sidebar__authbtn app-sidebar__authbtn--root">Root Login</a>
+      {% endif %}
+      <a href="/auth/logout" class="app-sidebar__item app-sidebar__item--logout">Logout</a>
+      {% else %}
+      <a href="/auth/login" class="app-sidebar__authbtn app-sidebar__authbtn--login">Login</a>
+      <a href="/auth/root" class="app-sidebar__authbtn app-sidebar__authbtn--root">Root Login</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- Top bar (fixed) -->
+  <header class="app-topbar">
+    <button class="app-hamburger" id="hamburgerBtn" onclick="toggleNav()" aria-label="Toggle navigation" aria-expanded="false">
+      <svg class="app-hamburger__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <line class="app-hamburger__line app-hamburger__line--top" x1="4" y1="7" x2="20" y2="7"/>
+        <line class="app-hamburger__line app-hamburger__line--mid" x1="4" y1="12" x2="20" y2="12"/>
+        <line class="app-hamburger__line app-hamburger__line--bot" x1="4" y1="17" x2="20" y2="17"/>
+      </svg>
+    </button>
+    <a href="/" class="app-topbar__brand mono">evo<span class="accent-dim">.ftp.sh</span></a>
+    <div class="app-topbar__right">
+      <span class="app-topbar__clock mono" id="clock"></span>
+    </div>
+  </header>
+
+  <!-- Page content pushed right of sidebar on desktop -->
+  <div class="app-content">
+    {% block content %}{% endblock %}
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <script>
+    function toggleNav() {
+      const sidebar = document.getElementById('appSidebar');
+      const overlay = document.getElementById('appOverlay');
+      const btn = document.getElementById('hamburgerBtn');
+      const open = sidebar.classList.toggle('app-sidebar--open');
+      overlay.classList.toggle('app-overlay--visible', open);
+      btn.setAttribute('aria-expanded', open);
+    }
+    function closeNav() {
+      document.getElementById('appSidebar').classList.remove('app-sidebar--open');
+      document.getElementById('appOverlay').classList.remove('app-overlay--visible');
+      document.getElementById('hamburgerBtn').setAttribute('aria-expanded', 'false');
+    }
+    // Close sidebar on escape
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
+    // Close sidebar automatically after tapping a nav link (mobile)
+    document.getElementById('appSidebar').addEventListener('click', e => {
+      if (e.target.closest('a')) closeNav();
+    });
+  </script>
+</body>
+</html>

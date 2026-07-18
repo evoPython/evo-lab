@@ -75,3 +75,13 @@
   margin: 24px 0 12px;
 }
 
+/* Wider variant for shells that host the sysgrid dashboard widget
+   (see home/server.css) — its 3-column bento layout is cramped at
+   the default 760px page-shell width. */
+.page-shell.dash-shell {
+  max-width: 900px;
+}
+.page-shell.dash-shell .server-grid {
+  margin-top: 20px;
+}
+

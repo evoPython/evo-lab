@@ -1,0 +1,71 @@
+/* ============================================================
+   FUN — a menu linking out to its own piano / letter pages
+   (and room for more later), plus a playable mini piano and
+   the letter editor.
+   ============================================================ */
+#homeApp .rh-fun-page { display: none; padding-bottom: 64px; }
+#homeApp .rh-fun-page.active { display: block; animation: rh-funFade var(--rh-dur-med) var(--rh-ease); }
+@keyframes rh-funFade { from { opacity: 0; } to { opacity: 1; } }
+
+#homeApp .rh-fun-list { margin-top: 22px; border-top: 1px solid var(--rh-surface0); }
+#homeApp .rh-fun-list__item {
+  display: flex; align-items: center; gap: 14px; padding: 18px 4px;
+  border-bottom: 1px solid var(--rh-surface0); font-family: var(--rh-mono);
+  transition: padding-left var(--rh-dur-fast) var(--rh-ease);
+}
+#homeApp a.rh-fun-list__item:hover, #homeApp a.rh-fun-list__item:focus-visible { padding-left: 10px; color: var(--rh-text); }
+#homeApp .rh-fun-list__item--soon { opacity: .5; cursor: default; }
+#homeApp .rh-fun-list__label { display: flex; align-items: center; font-size: 15.5px; font-weight: 600; color: var(--rh-text); flex-shrink: 0; }
+#homeApp .rh-fun-list__label .glyph { color: var(--rh-mauve); margin-right: 8px; }
+#homeApp .rh-fun-list__desc { color: var(--rh-overlay1); font-size: 13.5px; flex: 1 1 auto; }
+#homeApp .rh-fun-list__item .arrow { color: var(--rh-mauve); flex-shrink: 0; }
+
+#homeApp .rh-fun-back-wrap {
+  display: flex; justify-content: center; margin-top: 40px;
+  opacity: 0; transform: translateY(10px);
+  animation: rh-fadeUp var(--rh-dur-slow) var(--rh-ease) forwards;
+  animation-delay: .1s;
+}
+#homeApp .rh-fun-back {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: 999px;
+  font-size: 12.5px; font-family: var(--rh-mono);
+  color: var(--rh-overlay1); background: var(--rh-mantle);
+  border: 1px solid var(--rh-surface0);
+  transition: color var(--rh-dur-med) var(--rh-ease),
+              background var(--rh-dur-med) var(--rh-ease),
+              border-color var(--rh-dur-med) var(--rh-ease),
+              transform var(--rh-dur-med) var(--rh-ease);
+}
+#homeApp .rh-fun-back:hover, #homeApp .rh-fun-back:focus-visible {
+  color: var(--rh-text); background: var(--rh-surface0);
+  border-color: var(--rh-surface1); transform: translateY(-2px);
+}
+
+#homeApp .rh-piano-wrap { margin-top: 10px; padding: 22px; background: var(--rh-mantle); border: 1px solid var(--rh-surface0); border-radius: 12px; }
+#homeApp .rh-piano-hint { font-size: 12px; color: var(--rh-overlay1); margin-bottom: 16px; font-family: var(--rh-mono); }
+#homeApp .rh-piano { display: flex; position: relative; height: 130px; user-select: none; gap: 2px; }
+#homeApp .rh-key {
+  flex: 1; background: var(--rh-surface0); border-radius: 0 0 6px 6px;
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px;
+  font-size: 10.5px; color: var(--rh-overlay1); font-family: var(--rh-mono); cursor: pointer;
+  box-shadow: 0 3px 0 var(--rh-surface2);
+  transition: background .12s var(--rh-ease), transform .12s var(--rh-ease), box-shadow .12s var(--rh-ease);
+}
+#homeApp .rh-key:hover { background: var(--rh-surface1); }
+#homeApp .rh-key.active { background: var(--rh-mauve); color: var(--rh-crust); transform: translateY(3px); box-shadow: 0 0 0 var(--rh-surface2); }
+#homeApp .rh-key.black {
+  position: absolute; top: 0; width: 7%; height: 62%; background: var(--rh-crust);
+  border-radius: 0 0 5px 5px; z-index: 2; color: var(--rh-overlay0);
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-size: 9.5px;
+  box-shadow: 0 3px 0 #000;
+  transition: background .12s var(--rh-ease), transform .12s var(--rh-ease), box-shadow .12s var(--rh-ease);
+}
+#homeApp .rh-key.black:hover { background: var(--rh-surface1); }
+#homeApp .rh-key.black.active { background: var(--rh-blue); color: var(--rh-crust); transform: translateY(3px); box-shadow: 0 0 0 #000; }
+
+#homeApp .rh-letter-wrap { margin-top: 44px; }
+
+@media (max-width: 720px) {
+  #homeApp .rh-piano { height: 110px; }
+}

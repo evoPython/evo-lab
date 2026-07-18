@@ -24,9 +24,10 @@
   gap: 14px;
 }
 .letterlist__item {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px 16px;
+  padding: 14px 46px 14px 16px;
   background: var(--bg-soft);
 }
 .letterlist__meta {
@@ -41,12 +42,11 @@
   color: var(--accent);
   font-weight: 600;
 }
-.letterlist__device {
-  font-size: var(--fs-sm);
-  margin: -2px 0 10px;
-  word-break: break-word;
-}
-.letterlist__body {
+
+/* letter text is the whole point of this page — keep it at full
+   readable brightness. (.page-shell p sets a dim color globally,
+   so this needs to out-specificity that rule, not just repeat it) */
+.page-shell .letterlist__body {
   color: var(--text);
   font-size: var(--fs-base);
   line-height: 1.55;
@@ -54,14 +54,104 @@
   word-break: break-word;
   margin-bottom: 10px;
 }
-.letterlist__delete { margin: 0; }
-.letterlist__delete .btn {
-  padding: 5px 10px;
-  font-size: var(--fs-sm);
+
+/* delete — tucked into the corner as a small icon button instead
+   of sitting in the reading flow under the letter */
+.letterlist__delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: var(--fs-lg);
+  line-height: 1;
   color: var(--text-faint);
+  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
-.letterlist__delete .btn:hover, .letterlist__delete .btn:focus-visible {
-  color: var(--warn);
-  border-color: var(--warn);
+.letterlist__delete:hover,
+.letterlist__delete:focus-visible {
+  color: var(--danger);
+  background: var(--panel-hover);
+  transform: rotate(90deg);
+}
+.letterlist__delete-form { display: none; }
+
+/* device / visitor details — collapsed by default, IP and visitor
+   id now live in here as a proper key/value list instead of being
+   crammed into the header line */
+.letterlist__device-details { margin: 2px 0 0; }
+.letterlist__device-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  padding: 3px 0;
+  transition: color 0.12s ease;
+}
+.letterlist__device-toggle::-webkit-details-marker { display: none; }
+.letterlist__device-toggle::before {
+  content: '+';
+  display: inline-block;
+  width: 10px;
+  font-size: 12px;
+  color: var(--text-faint);
+  transition: color 0.15s ease;
+}
+.letterlist__device-toggle:hover { color: var(--text); }
+.letterlist__device-toggle:hover::before { color: var(--accent); }
+.letterlist__device-details[open] > .letterlist__device-toggle::before {
+  content: '−';
+  color: var(--accent);
+}
+.letterlist__device-details[open] > .letterlist__device-toggle { color: var(--text-dim); }
+.letterlist__device-badge {
+  font-size: var(--fs-sm);
+  color: var(--accent-dim);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 6px;
 }
 
+.letterlist__device {
+  margin: 6px 0 0;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  animation: letterlist-device-in 0.18s ease both;
+}
+.letterlist__device-row {
+  display: flex;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: var(--fs-sm);
+  border-bottom: 1px solid var(--border);
+}
+.letterlist__device-row:last-child { border-bottom: none; }
+.letterlist__device-row dt {
+  flex: none;
+  width: 84px;
+  color: var(--text-faint);
+}
+.letterlist__device-row dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--text-dim);
+  word-break: break-word;
+}
+@keyframes letterlist-device-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 480px) {
+  .letterlist__device-row { flex-direction: column; gap: 2px; }
+  .letterlist__device-row dt { width: auto; }
+}

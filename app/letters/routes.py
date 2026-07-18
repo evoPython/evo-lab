@@ -5,6 +5,8 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from app.core.db import get_db
 from app.core.security import require_personal_device
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 letters = Blueprint(
     "letters",
@@ -130,10 +132,14 @@ def send_letter():
 
     visitor_id, _ = _get_or_create_visitor_id()
 
+    created_at = datetime.now(
+        ZoneInfo("Asia/Singapore")
+    ).strftime("%Y-%m-%d %H:%M:%S")
+
     db = get_db()
     db.execute(
-        "INSERT INTO letters (name, body, ip, visitor_id) VALUES (?, ?, ?, ?)",
-        (name or None, body[:MAX_BODY_LEN], ip, visitor_id),
+        "INSERT INTO letters (name, body, ip, visitor_id, created_at) VALUES (?, ?, ?, ?, ?)",
+        (name or None, body[:MAX_BODY_LEN], ip, visitor_id, created_at),
     )
     _upsert_visitor(visitor_id, ip, device)
     db.commit()

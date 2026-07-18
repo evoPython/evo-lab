@@ -43,7 +43,8 @@
 <body>
   <a class="skip-link" href="#stage">skip to content</a>
 
-  <header class="topbar">
+  {% block topbar %}
+  <header class="topbar" style="position:fixed;top:0;left:0;right:0;z-index:100;">
     <div class="topbar__left">
       <span class="topbar__id mono">evo<span class="accent-dim">.ftp.sh</span></span>
       <span class="topbar__tagline mono dim">my slice of the internet</span>
@@ -53,42 +54,11 @@
       <span class="topbar__clock mono" id="clock"></span>
     </div>
   </header>
+  {% endblock %}
 
-  {% if is_personal or is_logged_in %}
-  <nav class="topnav" aria-label="Main">
-    {% if is_personal %}
-    <a href="/dashboard" class="topnav__item">Dashboard</a>
-    <a href="/tools" class="topnav__item">Tools</a>
-    <a href="/remote" class="topnav__item">Remote</a>
-    <a href="/letters/inbox" class="topnav__item">Inbox{% if unread_letters %}<span class="topnav__badge">{{ unread_letters }}</span>{% endif %}</a>
-    {% else %}
-    <a href="/auth/root" class="topnav__item">Dashboard</a>
-    <a href="/auth/root" class="topnav__item">Tools</a>
-    <a href="/auth/root" class="topnav__item">Remote</a>
-    {% endif %}
-    {% if is_logged_in %}
-    <a href="/cross-remote" class="topnav__item">Cross-Remote</a>
-    {% else %}
-    <a href="/auth/login" class="topnav__item">Cross-Remote</a>
-    {% endif %}
-    <span class="topnav__right">
-      {% if not is_personal %}
-      <a href="/auth/root" class="topnav__item mono">root login</a>
-      |
-      {% endif %}
-      {% if is_logged_in %}
-      {{ current_user }}
-      {% else %}
-      <a href="/auth/login" class="topnav__item">Login / Register</a>
-      {% endif %}
-      {% if is_personal or is_logged_in %}
-      <a href="/auth/logout" class="topnav__item">Logout</a>
-      {% endif %}
-    </span>
-  </nav>
-  {% endif %}
-
-  {% block content %}{% endblock %}
+  <div style="{% block content_wrap_style %}padding-top:var(--header-h);{% endblock %}">
+    {% block content %}{% endblock %}
+  </div>
 
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>

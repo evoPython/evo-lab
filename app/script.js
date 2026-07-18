@@ -384,9 +384,7 @@
   const navLinks = document.getElementById('navLinks');
   const navCursor = document.getElementById('navCursor');
   const footerPath = document.getElementById('footerPath');
-  const backHint = document.getElementById('backHint');
   let currentIndex = 0;
-  let currentFunSub = 'menu';
 
   function routeFromHash() {
     const h = (location.hash || '#home').slice(1);
@@ -437,14 +435,10 @@
 
     if (parts[0] === 'fun') {
       const sub = ['piano', 'letter'].includes(parts[1]) ? parts[1] : 'menu';
-      currentFunSub = sub;
       homeApp.querySelectorAll('.rh-fun-page').forEach((el) => {
         el.classList.toggle('active', el.dataset.funPage === sub);
       });
-    } else {
-      currentFunSub = 'menu';
     }
-    backHint?.classList.toggle('is-visible', route === 'fun' && currentFunSub !== 'menu');
   }
 
   window.addEventListener('hashchange', render);
@@ -457,17 +451,12 @@
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     if (document.getElementById('modalOverlay')?.classList.contains('open')) return;
 
-    if (e.key === 'Backspace' && routeFromHash() === 'fun' && currentFunSub !== 'menu') {
-      e.preventDefault();
-      location.hash = '#fun';
-    } else if (e.key === 'ArrowRight') {
+    if (e.key === 'ArrowRight') {
       const next = Math.min(currentIndex + 1, ROUTES.length - 1);
       location.hash = `#${ROUTES[next]}`;
     } else if (e.key === 'ArrowLeft') {
       const prev = Math.max(currentIndex - 1, 0);
       location.hash = `#${ROUTES[prev]}`;
-    } else if (['1', '2', '3', '4'].includes(e.key)) {
-      location.hash = `#${ROUTES[Number(e.key) - 1]}`;
     }
   });
 
@@ -590,8 +579,8 @@
       <p class="rh-modal__sub">${p.tag}</p>
       <div class="rh-field"><label>about</label><p>${p.desc}</p></div>
       <div class="rh-modal__gallery">
-        <div class="rh-modal__visual" aria-hidden="true"><span class="rh-modal__visual-label">NO IMAGE</span></div>
-        <div class="rh-modal__visual" aria-hidden="true"><span class="rh-modal__visual-label">NO IMAGE</span></div>
+        <div class="rh-modal__visual" aria-hidden="true"></div>
+        <div class="rh-modal__visual" aria-hidden="true"></div>
       </div>
       <div class="rh-field"><label>more</label><p>${p.body || ''}</p></div>
       <div class="rh-links"><a href="${p.link}" data-fake-link>source</a></div>

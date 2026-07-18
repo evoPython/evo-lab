@@ -16,6 +16,8 @@
   flex-direction: column;
   gap: 2px;
   position: relative;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .sidenav__indicator {

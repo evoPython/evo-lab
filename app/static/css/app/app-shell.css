@@ -1,0 +1,328 @@
+/* ============================================================
+   APP SHELL — sidebar + fixed topbar layout for logged-in pages
+   Mobile: hamburger + slide-in drawer
+   Desktop (≥ 768px): permanent sidebar, content offset
+   ============================================================ */
+
+/* Body in app mode.
+   The base site is a single-page "stage" layout, so html/body are locked
+   with overflow:hidden globally. App pages are normal scrolling documents,
+   so we turn body back into its own scroll container here — this is what
+   makes pages built on app_base.html scrollable again. */
+html:has(.app-body) {
+  height: 100%;
+}
+.app-body {
+  height: 100%;
+  min-height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Fixed topbar ───────────────────────────────────────────── */
+.app-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: var(--bg-soft);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.app-topbar__brand {
+  font-size: var(--fs-base);
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+.app-topbar__brand .accent-dim { color: var(--accent-dim); }
+
+.app-topbar__right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.app-topbar__clock {
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+}
+
+/* ── Hamburger button (visible on mobile) ───────────────────── */
+.app-hamburger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.app-hamburger:hover,
+.app-hamburger:focus-visible {
+  background: var(--accent-soft);
+  border-color: var(--border);
+}
+
+.app-hamburger__icon {
+  width: 20px;
+  height: 20px;
+  overflow: visible;
+}
+.app-hamburger__line {
+  stroke: var(--text-dim);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  transform-origin: 12px 12px;
+  transition: stroke 0.15s ease, transform 0.28s var(--ease), opacity 0.2s ease;
+}
+.app-hamburger:hover .app-hamburger__line,
+.app-hamburger:focus-visible .app-hamburger__line {
+  stroke: var(--accent);
+}
+
+/* Morph into an X when the drawer is open */
+.app-hamburger[aria-expanded="true"] .app-hamburger__line {
+  stroke: var(--accent);
+}
+.app-hamburger[aria-expanded="true"] .app-hamburger__line--top {
+  transform: translateY(5px) rotate(45deg);
+}
+.app-hamburger[aria-expanded="true"] .app-hamburger__line--mid {
+  opacity: 0;
+  transform: scaleX(0);
+}
+.app-hamburger[aria-expanded="true"] .app-hamburger__line--bot {
+  transform: translateY(-5px) rotate(-45deg);
+}
+
+/* ── Sidebar ────────────────────────────────────────────────── */
+.app-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 300;
+  width: var(--sidenav-w);
+  background: var(--bg-soft);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.25s var(--ease);
+  box-shadow: 0 0 32px rgba(0, 0, 0, 0.35);
+}
+
+.app-sidebar--open {
+  transform: translateX(0);
+}
+
+.app-sidebar__header {
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.app-sidebar__brand {
+  font-size: var(--fs-base);
+  color: var(--text);
+  letter-spacing: 0.01em;
+  transition: opacity 0.15s ease;
+}
+.app-sidebar__brand:hover { opacity: 0.8; }
+.app-sidebar__brand .accent-dim { color: var(--accent-dim); }
+
+.app-sidebar__links {
+  flex: 1;
+  padding: 10px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-sidebar__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  border-radius: var(--radius-sm);
+  transition: color 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+.app-sidebar__item:hover,
+.app-sidebar__item:focus-visible {
+  color: var(--text);
+  background: var(--panel-hover);
+}
+.app-sidebar__item--active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.app-sidebar__item--active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.app-sidebar__item--logout {
+  color: var(--text-faint);
+}
+.app-sidebar__item--logout:hover {
+  color: var(--danger);
+  background: rgba(224, 138, 122, 0.10);
+}
+
+.app-sidebar__badge {
+  margin-left: auto;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.app-sidebar__footer {
+  padding: 10px 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.app-sidebar__user {
+  padding: 4px 12px 8px;
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+/* Guest auth buttons */
+.app-sidebar__authbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+.app-sidebar__authbtn--login {
+  color: var(--text-dim);
+  background: var(--panel);
+}
+.app-sidebar__authbtn--login:hover,
+.app-sidebar__authbtn--login:focus-visible {
+  color: var(--text);
+  background: var(--panel-hover);
+  border-color: var(--border-strong);
+}
+.app-sidebar__authbtn--root {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+.app-sidebar__authbtn--root::before {
+  content: '#';
+  opacity: 0.7;
+}
+.app-sidebar__authbtn--root:hover,
+.app-sidebar__authbtn--root:focus-visible {
+  background: var(--accent-soft-2);
+}
+
+/* ── Overlay (mobile only) ──────────────────────────────────── */
+.app-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  /* Even while invisible this sits above the topbar (z-index 250 > 200),
+     so without pointer-events:none it silently ate every click on the
+     hamburger button and the whole page — that was the actual bug. */
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.app-overlay--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Content area ───────────────────────────────────────────── */
+.app-content {
+  padding-top: var(--header-h);
+  min-height: 100vh;
+  animation: app-content-in 0.35s var(--ease);
+}
+
+@keyframes app-content-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Desktop: permanent sidebar ─────────────────────────────── */
+@media (min-width: 768px) {
+  .app-hamburger {
+    display: none;
+  }
+
+  .app-sidebar {
+    transform: translateX(0);
+    top: 0;
+  }
+
+  .app-topbar {
+    left: var(--sidenav-w);
+  }
+  /* hide brand in topbar on desktop — sidebar has it */
+  .app-topbar__brand {
+    display: none;
+  }
+
+  .app-content {
+    margin-left: var(--sidenav-w);
+  }
+
+  .app-overlay {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-overlay {
+    display: block;
+  }
+}

@@ -1,7 +1,7 @@
 /* ============================================================
    SERVER
    ============================================================ */
-.server-grid { display: grid; gap: 18px; max-width: 760px; }
+.server-grid { display: grid; gap: 18px; overflow-y: auto; padding-bottom: 40px; }
 
 .status-line {
   display: flex;
@@ -44,8 +44,9 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-areas:
-    "cpu  cpu  cpu"
-    "mem  disk net";
+    "cpu   cpu   cpu"
+    "mem   disk  net"
+    "batt  batt  pwr";
   gap: 10px;
 }
 
@@ -61,10 +62,12 @@
 }
 .syscell:hover { border-color: var(--border-strong); }
 
-.syscell--cpu  { grid-area: cpu; }
-.syscell--mem  { grid-area: mem; }
-.syscell--disk { grid-area: disk; }
-.syscell--net  { grid-area: net; }
+.syscell--cpu     { grid-area: cpu; }
+.syscell--mem     { grid-area: mem; }
+.syscell--disk    { grid-area: disk; }
+.syscell--net     { grid-area: net; }
+.syscell--battery { grid-area: batt; }
+.syscell--power   { grid-area: pwr; }
 
 .syscell__top {
   display: flex;
@@ -121,6 +124,71 @@
 .syscell__graph-bar.is-warn { background: var(--warn); }
 .syscell__graph-bar.is-danger { background: var(--danger); }
 
+.syscell__foot--split { justify-content: space-between; }
+
+/* Battery: a phone-style line/area chart instead of the CPU bar
+   sparkline, since this is trend data (sqlite-backed, logged once a
+   minute) the person can page through by range, not a live window. */
+.syscell--battery { padding-bottom: 10px; }
+
+.battery-range {
+  display: flex;
+  gap: 4px;
+}
+.battery-range__opt {
+  flex: 1 1 0;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-faint);
+  font-size: 10.5px;
+  line-height: 1;
+  padding: 4px 0;
+  cursor: pointer;
+  text-align: center;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.battery-range__opt:hover, .battery-range__opt:focus-visible {
+  color: var(--text-dim);
+  border-color: var(--border-strong);
+}
+.battery-range__opt.is-active {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+  background: var(--accent-soft);
+}
+
+.syscell__linegraph {
+  height: 46px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+}
+.battery-chart { display: block; width: 100%; height: 100%; overflow: visible; }
+.battery-chart__area { fill: var(--accent-soft-2); stroke: none; }
+.battery-chart__line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.battery-chart__midline {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  vector-effect: non-scaling-stroke;
+}
+.battery-chart__dot { fill: var(--accent); }
+.battery-chart__charge-dot { fill: var(--ok); }
+
+.battery-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+
 /* thin usage bars, shared by mem/disk rows */
 .syscell__bar {
   height: 6px;
@@ -175,13 +243,55 @@
   flex-shrink: 0;
 }
 
+/* Power mode: read-only reflection of whatever mode is currently
+   set (via the authenticated /remote panel) — not an in-page
+   control. No cursor/hover-as-button affordance; the dot/label
+   pattern is kept purely for the "which one's lit up" visual. */
+.powermode {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+.powermode__opt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 2px;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  border-radius: var(--radius-sm);
+  transition: color 0.15s ease;
+}
+.powermode__opt.is-active { color: var(--text); }
+.powermode__dot {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  background: transparent;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.powermode__opt.is-active .powermode__dot {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.powermode__label {
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
 @media (max-width: 640px) {
   .sysgrid {
     grid-template-columns: repeat(2, 1fr);
     grid-template-areas:
-      "cpu  cpu"
-      "mem  disk"
-      "net  net";
+      "cpu   cpu"
+      "mem   disk"
+      "net   net"
+      "batt  batt"
+      "pwr   pwr";
   }
 }
 
@@ -192,7 +302,9 @@
       "cpu"
       "mem"
       "disk"
-      "net";
+      "net"
+      "batt"
+      "pwr";
   }
 }
 

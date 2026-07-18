@@ -14,18 +14,20 @@
 @import url("base/reset.css");
 @import url("base/transitions.css");
 
-/* ---- home: the single-page app (index / dashboard-as-home) ---- */
-@import url("home/topbar.css");
-@import url("home/workspace-shell.css");
+/* ---- home: the single-page app (index / dashboard-as-home) ----
+   Redesigned 2026 — nav + horizontally-sliding panel track instead
+   of the old sidenav/tabpanel layout. Everything below is scoped
+   under #homeApp so it can carry its own colour palette without
+   touching the vars other pages (tools, dashboard, remote…) rely on.
+   home/server.css and home/music.css are no longer imported: the
+   live system-stats view and the in-page music player were dropped
+   in the redesign. Their files are left on disk, unused, in case
+   they're wanted back later. */
 @import url("home/home.css");
 @import url("home/about.css");
 @import url("home/projects.css");
-@import url("home/server.css");
-@import url("home/music.css");
 @import url("home/letter.css");
-@import url("home/links.css");
-@import url("home/mobile-tabbar.css");
-@import url("home/command-palette.css");
+@import url("home/fun.css");
 
 /* ---- app: the other, multi-page app-shell screens ---- */
 @import url("app/app-nav.css");

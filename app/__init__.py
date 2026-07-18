@@ -5,6 +5,8 @@ from flask import Flask
 from config import Config
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from app.modes.routes import modes
+
 
 def create_app():
 
@@ -52,6 +54,7 @@ def create_app():
     app.register_blueprint(auth)
     app.register_blueprint(cross_remote)
     app.register_blueprint(letters)
+    app.register_blueprint(modes)
 
     # Lets templates conditionally show private nav links without
     # every route having to pass status flags in explicitly.

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "app_base.html" %}
 
 {% block title %}Inbox{% endblock %}
 
@@ -12,32 +12,45 @@
   <ul class="letterlist">
     {% for l in letters %}
     <li class="letterlist__item">
+      <button type="submit" form="letter-delete-{{ l.id }}" class="letterlist__delete" aria-label="delete letter from {{ l.name or 'anonymous' }}">×</button>
       <div class="letterlist__meta mono">
         <span class="letterlist__from">{{ l.name or 'anonymous' }}</span>
         <span class="dim">·</span>
         <span class="letterlist__date dim">{{ l.created_at }}</span>
-        <span class="dim">·</span>
-        <span class="letterlist__ip dim">{{ l.ip }}</span>
-        {% if l.visitor_id %}
-        <span class="dim">·</span>
-        <span class="letterlist__visitor dim" title="{{ l.visitor_id }}">
-          visitor {{ l.visitor_id[:8] }}{% if l.visitor_letters_sent and l.visitor_letters_sent > 1 %} · {{ l.visitor_letters_sent }} letters from this visitor{% endif %}
-        </span>
-        {% endif %}
       </div>
-      {% if l.visitor_id and (l.visitor_platform or l.visitor_screen or l.visitor_language or l.visitor_timezone or l.visitor_user_agent) %}
-      <p class="letterlist__device dim mono">
-        {{ l.visitor_platform or '?' }}
-        {% if l.visitor_screen %}· {{ l.visitor_screen }}{% endif %}
-        {% if l.visitor_language %}· {{ l.visitor_language }}{% endif %}
-        {% if l.visitor_timezone %}· {{ l.visitor_timezone }}{% endif %}
-        {% if l.visitor_user_agent %}· {{ l.visitor_user_agent }}{% endif %}
-      </p>
-      {% endif %}
       <p class="letterlist__body">{{ l.body }}</p>
-      <form method="post" action="/letters/{{ l.id }}/delete" class="letterlist__delete" onsubmit="return confirm('delete this letter?');">
-        <button type="submit" class="btn">delete</button>
-      </form>
+      {% if l.ip or l.visitor_id %}
+      <details class="letterlist__device-details">
+        <summary class="letterlist__device-toggle mono dim">
+          details
+          {% if l.visitor_letters_sent and l.visitor_letters_sent > 1 %}<span class="letterlist__device-badge">{{ l.visitor_letters_sent }}×</span>{% endif %}
+        </summary>
+        <dl class="letterlist__device mono dim">
+          {% if l.ip %}
+          <div class="letterlist__device-row"><dt>ip</dt><dd>{{ l.ip }}</dd></div>
+          {% endif %}
+          {% if l.visitor_id %}
+          <div class="letterlist__device-row"><dt>visitor</dt><dd title="{{ l.visitor_id }}">{{ l.visitor_id[:8] }}</dd></div>
+          {% endif %}
+          {% if l.visitor_platform %}
+          <div class="letterlist__device-row"><dt>platform</dt><dd>{{ l.visitor_platform }}</dd></div>
+          {% endif %}
+          {% if l.visitor_screen %}
+          <div class="letterlist__device-row"><dt>screen</dt><dd>{{ l.visitor_screen }}</dd></div>
+          {% endif %}
+          {% if l.visitor_language %}
+          <div class="letterlist__device-row"><dt>language</dt><dd>{{ l.visitor_language }}</dd></div>
+          {% endif %}
+          {% if l.visitor_timezone %}
+          <div class="letterlist__device-row"><dt>timezone</dt><dd>{{ l.visitor_timezone }}</dd></div>
+          {% endif %}
+          {% if l.visitor_user_agent %}
+          <div class="letterlist__device-row"><dt>user agent</dt><dd>{{ l.visitor_user_agent }}</dd></div>
+          {% endif %}
+        </dl>
+      </details>
+      {% endif %}
+      <form method="post" action="/letters/{{ l.id }}/delete" class="letterlist__delete-form" id="letter-delete-{{ l.id }}" onsubmit="return confirm('delete this letter?');"></form>
     </li>
     {% endfor %}
   </ul>

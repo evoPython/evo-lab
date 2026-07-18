@@ -4,9 +4,11 @@
 *, *::before, *::after { box-sizing: border-box; min-width: 0; }
 html, body { height: 100%; }
 html {
-  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-width: none;
   overflow-x: hidden;
 }
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { width: 0; height: 0; display: none; }
 body {
   margin: 0;
   background: var(--bg);
