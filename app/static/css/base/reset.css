@@ -7,6 +7,19 @@ html {
   scrollbar-width: none;
   overflow-x: hidden;
 }
+/* no selectable text anywhere on the site by default — re-enabled
+   below for the handful of elements where selecting text is actually
+   useful (form fields, contenteditable areas). */
+* {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
+input, textarea, [contenteditable], [contenteditable] * {
+  user-select: text;
+  -webkit-user-select: text;
+  -ms-user-select: text;
+}
 * { scrollbar-width: none; -ms-overflow-style: none; }
 *::-webkit-scrollbar { width: 0; height: 0; display: none; }
 body {

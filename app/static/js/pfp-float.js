@@ -72,8 +72,52 @@
   const viewW = () => trackWrapper.clientWidth;
   const viewH = () => trackWrapper.clientHeight;
 
+  /* ---- wall-hit ripple: reuses the same .rh-blob--cursor ripple
+     look as the click-and-hold effect, just spawned already in its
+     "released" state at the exact spot the pfp made contact, instead
+     of at a pointer. A short debounce stops it from re-firing every
+     single frame while the pfp is pinned against a sweeping wall. ---- */
+  const glowLayer = document.querySelector('#homeApp .rh-grid-glow');
+  let lastWallRippleT = 0;
+  const WALL_RIPPLE_COOLDOWN = 260; // ms
+
+  function spawnWallRipple(cx, cy) {
+    if (reduceMotion || !glowLayer) return;
+    const now = performance.now();
+    if (now - lastWallRippleT < WALL_RIPPLE_COOLDOWN) return;
+    lastWallRippleT = now;
+    const blob = document.createElement('span');
+    blob.className = 'rh-blob rh-blob--cursor is-releasing';
+    blob.style.left = `${cx}px`;
+    blob.style.top = `${cy}px`;
+    glowLayer.appendChild(blob);
+    blob.addEventListener('animationend', () => blob.remove(), { once: true });
+    setTimeout(() => blob.remove(), 1400); // safety net, mirrors the click ripple
+  }
+
   let wasOnScreen = true; // tracks visibility so we can catch the moment it leaves the screen
   let prevWallLeft = null, prevWallRight = null; // for measuring how fast the walls themselves sweep
+
+  /* ---- entrance: the pfp starts at opacity:0 (see CSS) and stays
+     hidden until the intro overlay + nav/track/footer reveal have
+     finished, so it's the last thing to land rather than popping in
+     alongside everything else. script.js fires 'rh:revealed' the
+     moment that reveal kicks off; we wait a bit longer past that for
+     its own transitions to actually settle, then fade/glitch the pfp
+     in. A timeout fallback guarantees it shows up even if that event
+     never arrives for some reason. ---- */
+  const REVEAL_SETTLE_MS = 750; // ~ matches rh-reveal-track's transition + delay
+  let entered = false;
+  const spawnSound = new Audio('/static/sfx/spawn.mp3');
+  spawnSound.volume = 0.6;
+  function enterPfp() {
+    if (entered) return;
+    entered = true;
+    img.classList.add('rh-pfp-enter');
+    spawnSound.play().catch(() => {}); // ignore autoplay-policy rejections
+  }
+  document.addEventListener('rh:revealed', () => setTimeout(enterPfp, REVEAL_SETTLE_MS), { once: true });
+  setTimeout(enterPfp, 5000);
 
   function scatterVelocity() {
     const dir = Math.random() * Math.PI * 2;
@@ -138,18 +182,33 @@
       x += vx * dt;
       y += vy * dt + Math.sin(bobT * 1.3) * 5 * dt;
 
+      let hitLeft = false, hitRight = false, hitTop = false, hitBottom = false;
+
       if (x < wallLeft) {
         x = wallLeft;
         vx = Math.max(Math.abs(vx) * 0.82, wallLeftVel + 90);
         angVel = -angVel - 40;
+        hitLeft = true;
       }
       if (x + s > wallRight) {
         x = wallRight - s;
         vx = Math.min(-Math.abs(vx) * 0.82, wallRightVel - 90);
         angVel = -angVel - 40;
+        hitRight = true;
       }
-      if (y < 0) { y = 0; vy = Math.abs(vy) * 0.88; }
-      if (y + s > h) { y = h - s; vy = -Math.abs(vy) * 0.88; }
+      if (y < 0) { y = 0; vy = Math.abs(vy) * 0.88; hitTop = true; }
+      if (y + s > h) { y = h - s; vy = -Math.abs(vy) * 0.88; hitBottom = true; }
+
+      // corner hits get one ripple at the actual corner rather than
+      // two overlapping edge ripples right next to each other.
+      if (hitLeft && hitTop) spawnWallRipple(wallLeft, 0);
+      else if (hitLeft && hitBottom) spawnWallRipple(wallLeft, h);
+      else if (hitRight && hitTop) spawnWallRipple(wallRight, 0);
+      else if (hitRight && hitBottom) spawnWallRipple(wallRight, h);
+      else if (hitLeft) spawnWallRipple(wallLeft, y + s / 2);
+      else if (hitRight) spawnWallRipple(wallRight, y + s / 2);
+      else if (hitTop) spawnWallRipple(x + s / 2, 0);
+      else if (hitBottom) spawnWallRipple(x + s / 2, h);
 
       const speed = Math.hypot(vx, vy);
       if (speed < 16) {
@@ -253,4 +312,11 @@
   img.addEventListener('pointerup', endDrag);
   img.addEventListener('pointercancel', endDrag);
   img.addEventListener('dragstart', (e) => e.preventDefault());
+  // On touch, a long, mostly-still press (e.g. lining up a drag before
+  // moving) can trigger the browser's native "save image" / callout
+  // menu, which fires pointercancel and makes it look like the drag
+  // was dropped early even though the finger never lifted. CSS
+  // (-webkit-touch-callout: none) handles most of this; blocking the
+  // menu event itself is the fallback for browsers that still show it.
+  img.addEventListener('contextmenu', (e) => e.preventDefault());
 })();

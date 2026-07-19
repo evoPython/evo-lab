@@ -359,7 +359,13 @@
     const stillFresh = savedTs && (Date.now() - savedTs < TTL);
 
     function reveal() {
-      requestAnimationFrame(() => requestAnimationFrame(() => homeApp.classList.add('rh-revealed')));
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        homeApp.classList.add('rh-revealed');
+        // lets pfp-float.js (a separate script, no shared scope) know
+        // the nav/track/footer reveal has kicked off, so it can time
+        // the pfp's own entrance to land just after theirs settles.
+        document.dispatchEvent(new CustomEvent('rh:revealed'));
+      }));
     }
 
     if (!overlay || stillFresh) {
@@ -394,6 +400,116 @@
     return ROUTES.includes(base) ? base : 'home';
   }
 
+  /* ------------------------------------------------------------
+     TAGLINE TYPEWRITER — types "student · programmer · musician"
+     into place each time the home panel is (re)entered.
+     ------------------------------------------------------------ */
+  const taglineType = document.getElementById('taglineType');
+  const TAGLINE_TEXT = 'student · programmer · musician';
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let taglineTimer = null;
+
+  function typeTagline() {
+    if (!taglineType) return;
+    clearTimeout(taglineTimer);
+
+    if (prefersReducedMotion) {
+      taglineType.textContent = TAGLINE_TEXT;
+      return;
+    }
+
+    taglineType.textContent = '';
+    let i = 0;
+    (function step() {
+      const justTyped = TAGLINE_TEXT[i - 1];
+      taglineType.textContent = TAGLINE_TEXT.slice(0, i);
+      i++;
+      if (i <= TAGLINE_TEXT.length) {
+        // slower base pace with real per-character randomness, plus an
+        // extra pause right after finishing a word (i.e. at a space)
+        const base = 55 + Math.random() * 95;
+        const wordPause = justTyped === ' ' ? 180 + Math.random() * 220 : 0;
+        taglineTimer = setTimeout(step, base + wordPause);
+      }
+    })();
+  }
+
+  /* ------------------------------------------------------------
+     CURSOR BLOB — press and hold anywhere spawns a glow blob at the
+     pointer that eases toward it while held (lerped each frame, so
+     it trails smoothly instead of snapping to raw pointer positions),
+     then ripples outward and fades on release.
+     ------------------------------------------------------------ */
+  (function initCursorBlob() {
+    const glowLayer = document.querySelector('#homeApp .rh-grid-glow');
+    if (!glowLayer || prefersReducedMotion) return;
+
+    const LERP = 0.08; // lower = smoother/laggier trail
+    const active = new Map(); // pointerId -> { el, tx, ty, cx, cy }
+    let rafId = null;
+
+    // base <audio> is never itself played — each click clones it, so
+    // rapid/overlapping clicks each get their own playback instead of
+    // one clock cutting off the last.
+    const clickSound = new Audio('/static/sfx/click.mp3');
+    clickSound.volume = 0.5;
+    const CLICK_PITCH_MIN = 0.85;
+    const CLICK_PITCH_MAX = 1.15;
+    function playClick() {
+      const a = clickSound.cloneNode(true);
+      a.volume = clickSound.volume;
+      // playbackRate doubles as pitch here (no separate audio graph
+      // needed) — a small random range per click so repeated clicks
+      // don't all sound identical.
+      a.playbackRate = CLICK_PITCH_MIN + Math.random() * (CLICK_PITCH_MAX - CLICK_PITCH_MIN);
+      a.play().catch(() => {}); // ignore autoplay-policy rejections
+    }
+
+    function frame() {
+      active.forEach((s) => {
+        s.cx += (s.tx - s.cx) * LERP;
+        s.cy += (s.ty - s.cy) * LERP;
+        s.el.style.left = `${s.cx}px`;
+        s.el.style.top = `${s.cy}px`;
+      });
+      rafId = requestAnimationFrame(frame);
+    }
+
+    document.addEventListener('pointerdown', (e) => {
+      const blob = document.createElement('span');
+      blob.className = 'rh-blob rh-blob--cursor';
+      blob.style.left = `${e.clientX}px`;
+      blob.style.top = `${e.clientY}px`;
+      glowLayer.appendChild(blob);
+      // playing a piano key fires its own note sound on down/up — skip
+      // the click sfx for that interaction so the two don't stack.
+      const isPiano = !!e.target.closest('.rh-piano');
+      active.set(e.pointerId, { el: blob, tx: e.clientX, ty: e.clientY, cx: e.clientX, cy: e.clientY, isPiano });
+      if (rafId === null) rafId = requestAnimationFrame(frame);
+    });
+
+    document.addEventListener('pointermove', (e) => {
+      const s = active.get(e.pointerId);
+      if (!s) return;
+      s.tx = e.clientX;
+      s.ty = e.clientY;
+    });
+
+    function release(e) {
+      const s = active.get(e.pointerId);
+      if (!s) return;
+      active.delete(e.pointerId);
+      if (active.size === 0 && rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+      s.el.classList.add('is-releasing');
+      s.el.addEventListener('animationend', () => s.el.remove(), { once: true });
+      // safety net in case the animation event never fires
+      setTimeout(() => s.el.remove(), 1400);
+      if (!s.isPiano) playClick();
+    }
+    document.addEventListener('pointerup', release);
+    document.addEventListener('pointercancel', release);
+  })();
+
   function moveCursor(link) {
     if (!link || !navCursor || !navLinks) return;
     const linkRect = link.getBoundingClientRect();
@@ -426,6 +542,7 @@
         void el.offsetWidth;
         el.style.animation = '';
       });
+      typeTagline();
     }
 
     const parts = (location.hash || '').slice(1).split('/');

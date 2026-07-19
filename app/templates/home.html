@@ -9,6 +9,13 @@
 
 <div id="homeApp">
 
+  <div class="rh-grid-glow" aria-hidden="true">
+    <span class="rh-blob rh-blob--1"></span>
+    <span class="rh-blob rh-blob--2"></span>
+    <span class="rh-blob rh-blob--3"></span>
+    <span class="rh-blob rh-blob--4"></span>
+  </div>
+
   <div class="rh-intro" id="introOverlay">
     <div class="rh-intro__inner">
       <p class="rh-intro__eyebrow mono">evo<span class="accent-dim">.ftp.sh</span></p>
@@ -36,7 +43,9 @@
         <div class="inner" id="main-content">
           <p class="eyebrow fade-up">home</p>
           <h1 class="rh-hero fade-up" style="animation-delay:.05s">hi, i'm <span class="rh-hero__name">evo.</span></h1>
-          <p class="rh-tagline fade-up" style="animation-delay:.15s">student · programmer · musician</p>
+          <p class="rh-tagline fade-up" style="animation-delay:.15s" id="tagline">
+            <span class="sr-only">student · programmer · musician</span>
+            <span class="rh-tagline__type" id="taglineType" aria-hidden="true"></span><span class="rh-tagline__cursor" id="taglineCursor" aria-hidden="true"></span>
           </p>
         </div>
       </section>
