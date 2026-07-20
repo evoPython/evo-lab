@@ -1,0 +1,13 @@
+{% if grading_periods %}
+<nav class="period-tabs" aria-label="Grading periods">
+    {% for item in grading_periods %}
+    <a href="/app/assessments/{{ enrollment_class_id }}?period={{ item.grading_period_id }}"
+       class="period-tab{% if item.grading_period_id == period %} active{% endif %}"
+       data-spa-link
+       {% if item.grading_period_id == period %}aria-current="page"{% endif %}>
+        <span class="period-tab-label period-tab-label-full">{{ item.label }}</span>
+        <span class="period-tab-label period-tab-label-short">{{ item.short_label or item.label }}</span>
+    </a>
+    {% endfor %}
+</nav>
+{% endif %}

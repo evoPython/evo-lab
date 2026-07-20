@@ -5,92 +5,188 @@
 {% block content %}
 <main class="stage" id="stage">
 <div class="rc-shell">
-  <div class="rc-head"><h1>remote</h1></div>
+  <div class="rc-head">
+    <h1>remote</h1>
+    <span class="rc-head__hint mono">control the laptop from here</span>
+  </div>
   <p class="rc-status mono" id="status"></p>
 
-  <div class="rc-grid">
+  <div class="rc-groups">
 
-    <section class="rc-panel">
-      <h2>System</h2>
-      <div class="rc-btnrow">
-        <button class="btn" onclick="runAction('/controls/lock')">Lock</button>
-        <button class="btn" onclick="confirmRun('/controls/sleep', 'Suspend the laptop now?')">Sleep</button>
-        <button class="btn" onclick="confirmRun('/controls/restart', 'Restart the laptop now?')">Restart</button>
-        <button class="btn" onclick="confirmRun('/controls/shutdown', 'Shut down the laptop now?')">Shutdown</button>
+    <details class="rc-group" open>
+      <summary class="rc-group__summary">
+        <span class="rc-group__icon" aria-hidden="true">&#9211;</span>
+        <span class="rc-group__chevron"></span>
+        <span class="rc-group__title">Power</span>
+        <span class="rc-group__hint">lock &middot; sleep &middot; restart &middot; shutdown</span>
+      </summary>
+      <div class="rc-group__body">
+        <div class="rc-tilerow">
+          <button class="rc-tile" onclick="runAction('/controls/lock')">
+            <span class="rc-tile__icon" aria-hidden="true">&#9887;</span>
+            <span class="rc-tile__label">Lock</span>
+          </button>
+          <button class="rc-tile" onclick="confirmRun('/controls/sleep', 'Suspend the laptop now?')">
+            <span class="rc-tile__icon" aria-hidden="true">&#9790;</span>
+            <span class="rc-tile__label">Sleep</span>
+          </button>
+          <button class="rc-tile rc-tile--danger" onclick="confirmRun('/controls/restart', 'Restart the laptop now?')">
+            <span class="rc-tile__icon" aria-hidden="true">&#8635;</span>
+            <span class="rc-tile__label">Restart</span>
+          </button>
+          <button class="rc-tile rc-tile--danger" onclick="confirmRun('/controls/shutdown', 'Shut down the laptop now?')">
+            <span class="rc-tile__icon" aria-hidden="true">&#9211;</span>
+            <span class="rc-tile__label">Shutdown</span>
+          </button>
+        </div>
       </div>
-    </section>
+    </details>
 
-    <section class="rc-panel">
-      <h2>Volume</h2>
-      <p class="rc-panel__value" id="volume-status">-</p>
-      <div class="rc-btnrow">
-        <button class="btn" onclick="runAction('/controls/volume/down')">Vol &minus;</button>
-        <button class="btn" onclick="runAction('/controls/volume/up')">Vol +</button>
-        <button class="btn" onclick="runAction('/controls/volume/mute')">Mute</button>
+    <details class="rc-group" open>
+      <summary class="rc-group__summary">
+        <span class="rc-group__icon" aria-hidden="true">&#9834;</span>
+        <span class="rc-group__chevron"></span>
+        <span class="rc-group__title">Audio &amp; Media</span>
+        <span class="rc-group__hint">volume &middot; brightness &middot; playback</span>
+      </summary>
+      <div class="rc-group__body">
+        <div class="rc-grid rc-grid--2col">
+          <section class="rc-panel rc-panel--span2">
+            <div class="rc-level">
+              <div class="rc-level__head">
+                <span class="rc-level__label">Volume</span>
+                <span class="rc-level__value mono" id="volume-status">&mdash;</span>
+              </div>
+              <div class="rc-meter"><div class="rc-meter__fill" id="volume-fill"></div></div>
+              <div class="rc-btnrow">
+                <button class="btn btn--sm" onclick="runAction('/controls/volume/down')" aria-label="Volume down">&minus;</button>
+                <button class="btn btn--sm" onclick="runAction('/controls/volume/up')" aria-label="Volume up">&plus;</button>
+                <button class="btn btn--sm" onclick="runAction('/controls/volume/mute')">Mute</button>
+              </div>
+            </div>
+
+            <div class="rc-level">
+              <div class="rc-level__head">
+                <span class="rc-level__label">Brightness</span>
+                <span class="rc-level__value mono" id="brightness-status">&mdash;</span>
+              </div>
+              <div class="rc-meter"><div class="rc-meter__fill" id="brightness-fill"></div></div>
+              <div class="rc-btnrow">
+                <button class="btn btn--sm" onclick="runAction('/controls/brightness/down'); setTimeout(loadBrightness,300)">Dim</button>
+                <button class="btn btn--sm" onclick="runAction('/controls/brightness/up'); setTimeout(loadBrightness,300)">Brighten</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="rc-panel rc-panel--span2">
+            <h2>Playback</h2>
+            <div class="rc-now-playing">
+              <div class="rc-now-playing__title" id="np-title">No media playing</div>
+              <div class="rc-now-playing__artist" id="np-artist"></div>
+              <div class="rc-now-playing__source mono dim" id="np-source"></div>
+              <input type="range" id="np-seek" class="rc-np-seek" min="0" max="100" value="0" step="1" aria-label="Seek">
+              <div class="rc-now-playing__time">
+                <span id="np-position">&mdash;</span>
+                <span id="np-length">&mdash;</span>
+              </div>
+            </div>
+            <div class="rc-transport" id="transport-controls">
+              <button class="rc-transport__btn" id="prev-btn" onclick="mediaPrev()" aria-label="Previous track">&#9198;</button>
+              <button class="rc-transport__btn rc-transport__btn--main" id="playpause-btn" onclick="mediaPlayPause()" aria-label="Play or pause">&#9654;</button>
+              <button class="rc-transport__btn" id="next-btn" onclick="mediaNext()" aria-label="Next track">&#9197;</button>
+            </div>
+            <div class="rc-btnrow">
+              <button class="btn btn--sm btn--primary" id="np-download" onclick="downloadCurrentTrack()" style="display:none;">Download to library</button>
+            </div>
+          </section>
+        </div>
       </div>
-    </section>
+    </details>
 
-    <section class="rc-panel">
-      <h2>Brightness</h2>
-      <p class="rc-panel__value" id="brightness-status">-</p>
-      <div class="rc-btnrow">
-        <button class="btn" onclick="runAction('/controls/brightness/down'); setTimeout(loadBrightness,300)">Dim</button>
-        <button class="btn" onclick="runAction('/controls/brightness/up'); setTimeout(loadBrightness,300)">Brighten</button>
+    <details class="rc-group" open>
+      <summary class="rc-group__summary">
+        <span class="rc-group__icon" aria-hidden="true">&#9638;</span>
+        <span class="rc-group__chevron"></span>
+        <span class="rc-group__title">Screen &amp; Workspaces</span>
+        <span class="rc-group__hint">live screenshot, window layout</span>
+      </summary>
+      <div class="rc-group__body">
+        <div class="rc-grid">
+          <section class="rc-panel rc-panel--span3">
+            <div class="rc-panel__headrow">
+              <h2>Screen</h2>
+              <label class="rc-check"><input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()"> Auto-refresh 2s</label>
+            </div>
+            <div class="rc-screen-wrap" id="screen-wrap">
+              <span class="rc-live-badge" id="live-badge">live</span>
+              <img id="screenshot" src="/niri/screenshot">
+              <div id="viewport-outline" class="rc-viewport-outline"></div>
+            </div>
+            <div class="rc-btnrow"><button class="btn" onclick="refreshScreenshot()">Refresh screenshot</button></div>
+          </section>
+
+          <section class="rc-panel rc-panel--span3">
+            <h2>Workspaces</h2>
+            <p class="rc-panel__value" id="overview-state"></p>
+            <div id="workspaces" class="rc-ws-row"></div>
+          </section>
+        </div>
       </div>
-    </section>
+    </details>
 
-    <section class="rc-panel">
-      <h2>Media</h2>
-      <div class="rc-btnrow rc-media-row">
-        <button class="btn" onclick="runAction('/controls/media/prev')">&laquo; Prev</button>
-        <button class="btn" onclick="runAction('/controls/media/playpause')">Play / Pause</button>
-        <button class="btn" onclick="runAction('/controls/media/next')">Next &raquo;</button>
+    <details class="rc-group">
+      <summary class="rc-group__summary">
+        <span class="rc-group__icon" aria-hidden="true">&#9656;</span>
+        <span class="rc-group__chevron"></span>
+        <span class="rc-group__title">Launch App</span>
+        <span class="rc-group__hint">search &amp; open on laptop</span>
+      </summary>
+      <div class="rc-group__body">
+        <div class="rc-grid">
+          <section class="rc-panel rc-panel--span3">
+            <input type="text" id="app-search" class="rc-search" placeholder="type to filter…" oninput="filterApps()">
+            <ul id="app-list" class="rc-applist mono"></ul>
+          </section>
+        </div>
       </div>
-    </section>
+    </details>
 
-    <section class="rc-panel">
-      <h2>Launch App</h2>
-      <input type="text" id="app-search" class="rc-search" placeholder="type to filter…" oninput="filterApps()">
-      <ul id="app-list" class="rc-applist mono"></ul>
-    </section>
+    <details class="rc-group">
+      <summary class="rc-group__summary">
+        <span class="rc-group__icon" aria-hidden="true">&#9673;</span>
+        <span class="rc-group__chevron"></span>
+        <span class="rc-group__title">Streaming</span>
+        <span class="rc-group__hint">camera &amp; mic, both directions</span>
+      </summary>
+      <div class="rc-group__body">
+        <div class="rc-grid">
+          <section class="rc-panel">
+            <h2>This device &rarr; laptop</h2>
+            <p class="rc-panel__value" id="stream-status">
+              <span class="rc-dot" id="camera-dot"></span>Camera
+              <span class="rc-dot" id="mic-dot"></span>Mic
+            </p>
+            <div class="rc-btnrow">
+              <button class="btn" id="camera-toggle" onclick="toggleCamera()">Turn camera on</button>
+              <button class="btn" id="mic-toggle" onclick="toggleMic()">Turn mic on</button>
+            </div>
+            <video id="local-preview" autoplay muted playsinline style="display:none; max-width:180px;"></video>
+          </section>
 
-    <section class="rc-panel">
-      <h2>Live Camera / Mic &rarr; laptop</h2>
-      <p class="rc-panel__value" id="stream-status">Camera: off | Mic: off</p>
-      <div class="rc-btnrow">
-        <button class="btn" id="camera-toggle" onclick="toggleCamera()">Turn camera on</button>
-        <button class="btn" id="mic-toggle" onclick="toggleMic()">Turn mic on</button>
+          <section class="rc-panel">
+            <h2>Laptop &rarr; this device</h2>
+            <div class="rc-btnrow">
+              <button class="btn" id="laptop-cam-toggle" onclick="toggleLaptopCamera()">Show laptop camera</button>
+              <button class="btn" id="laptop-mic-toggle" onclick="toggleLaptopMic()">Play laptop mic</button>
+            </div>
+            <div class="rc-video-row">
+              <img id="laptop-cam-img" style="display:none; max-width:260px;">
+              <audio id="laptop-mic-audio" controls style="display:none;"></audio>
+            </div>
+          </section>
+        </div>
       </div>
-      <video id="local-preview" autoplay muted playsinline style="display:none; max-width:180px;"></video>
-    </section>
-
-    <section class="rc-panel rc-panel--span2">
-      <h2>Laptop Camera / Mic &rarr; phone</h2>
-      <div class="rc-btnrow">
-        <button class="btn" id="laptop-cam-toggle" onclick="toggleLaptopCamera()">Show laptop camera</button>
-        <button class="btn" id="laptop-mic-toggle" onclick="toggleLaptopMic()">Play laptop mic</button>
-      </div>
-      <div class="rc-video-row">
-        <img id="laptop-cam-img" style="display:none; max-width:260px;">
-        <audio id="laptop-mic-audio" controls style="display:none;"></audio>
-      </div>
-    </section>
-
-    <section class="rc-panel rc-panel--span3">
-      <h2>Screen</h2>
-      <label class="rc-check"><input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()"> Auto-refresh every 2s</label>
-      <div class="rc-screen-wrap" id="screen-wrap">
-        <img id="screenshot" src="/niri/screenshot">
-        <div id="viewport-outline" class="rc-viewport-outline"></div>
-      </div>
-      <div class="rc-btnrow"><button class="btn" onclick="refreshScreenshot()">Refresh screenshot</button></div>
-    </section>
-
-    <section class="rc-panel rc-panel--span3">
-      <h2>Workspaces</h2>
-      <p class="rc-panel__value" id="overview-state"></p>
-      <div id="workspaces" class="rc-ws-row"></div>
-    </section>
+    </details>
 
   </div>
 
@@ -99,8 +195,17 @@
   <script>
 const SCALE = 0.15;
 let autoRefreshTimer = null;
+let statusTimer = null;
 
-function setStatus(msg) { document.getElementById("status").textContent = msg; }
+function setStatus(msg) {
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  el.classList.toggle("is-visible", !!msg);
+  if (statusTimer) clearTimeout(statusTimer);
+  if (msg) {
+    statusTimer = setTimeout(() => { el.classList.remove("is-visible"); }, 2600);
+  }
+}
 
 async function postJSON(url, body) {
   const res = await fetch(url, {
@@ -132,10 +237,163 @@ async function loadVolume() {
   try {
     const res = await fetch("/controls/volume/status");
     const data = await res.json();
-    document.getElementById("volume-status").textContent = data.error
-      ? "Volume: " + data.error
-      : "Volume: " + data.percent + "%" + (data.muted ? " (muted)" : "");
+    const fill = document.getElementById("volume-fill");
+    if (data.error) {
+      document.getElementById("volume-status").textContent = data.error;
+      fill.style.width = "0%";
+      return;
+    }
+    document.getElementById("volume-status").textContent = data.percent + "%" + (data.muted ? " · muted" : "");
+    fill.style.width = data.percent + "%";
+    fill.classList.toggle("is-muted", !!data.muted);
   } catch (e) {}
+}
+
+// --- Media / playback (playerctl) ---
+function formatTime(seconds) {
+  if (seconds == null || !isFinite(seconds)) return "\u2014";
+  seconds = Math.max(0, Math.round(seconds));
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m + ":" + String(s).padStart(2, "0");
+}
+
+// The laptop can be making sound two ways: our own music tool's mpv
+// instance, or "typical" laptop media (Spotify, a browser tab, etc.)
+// that playerctl sees. /media/music/api/now_playing merges both —
+// this panel shows whichever is actually active and tags which one
+// it is, and routes the transport buttons to the matching backend.
+let currentMediaSource = "none";
+let currentMediaFilename = null;
+let library = [];
+let seeking = false;
+
+async function loadLibrary() {
+  try {
+    const res = await fetch("/media/music/api/library");
+    const data = await res.json();
+    library = data.tracks || [];
+  } catch (e) { /* next/prev just won't have data yet */ }
+}
+
+async function loadMedia() {
+  const titleEl = document.getElementById("np-title");
+  const artistEl = document.getElementById("np-artist");
+  const sourceEl = document.getElementById("np-source");
+  const seekEl = document.getElementById("np-seek");
+  const posEl = document.getElementById("np-position");
+  const lenEl = document.getElementById("np-length");
+  const btn = document.getElementById("playpause-btn");
+  const downloadBtn = document.getElementById("np-download");
+  const prevBtn = document.getElementById("prev-btn");
+  const nextBtn = document.getElementById("next-btn");
+
+  try {
+    const res = await fetch("/media/music/api/now_playing");
+    const data = await res.json();
+    currentMediaSource = data.source || "none";
+    currentMediaFilename = data.filename || null;
+
+    if (data.error || currentMediaSource === "none") {
+      titleEl.textContent = data.error ? data.error : "No media playing";
+      artistEl.textContent = "";
+      sourceEl.textContent = "";
+      seekEl.value = 0;
+      seekEl.disabled = true;
+      posEl.textContent = "\u2014";
+      lenEl.textContent = "\u2014";
+      btn.innerHTML = "&#9654;"; // play
+      btn.setAttribute("aria-label", "Play");
+      downloadBtn.style.display = "none";
+      prevBtn.style.display = "";
+      nextBtn.style.display = "";
+      return;
+    }
+
+    titleEl.textContent = data.title;
+    artistEl.textContent = [data.artist, data.album].filter(Boolean).join(" \u00b7 ");
+    sourceEl.textContent = currentMediaSource === "music-tool" ? "via music tool" : "laptop media";
+
+    // Seeking only works against our own mpv instance (music-tool);
+    // "laptop media" (playerctl) has no generic seek control here.
+    seekEl.disabled = currentMediaSource !== "music-tool" || !data.duration;
+    if (!seeking) {
+      if (data.duration) seekEl.max = Math.floor(data.duration);
+      seekEl.value = Math.floor(data.position || 0);
+    }
+    posEl.textContent = formatTime(data.position);
+    lenEl.textContent = data.duration ? formatTime(data.duration) : "live";
+
+    // pause glyph while playing (so pressing it pauses), play glyph otherwise
+    btn.innerHTML = data.playing ? "&#9208;" : "&#9654;";
+    btn.setAttribute("aria-label", data.playing ? "Pause" : "Play");
+
+    // prev/next work for both sources now: music-tool steps through the
+    // downloaded library (looping), laptop-media defers to playerctl.
+    prevBtn.style.display = "";
+    nextBtn.style.display = "";
+
+    downloadBtn.style.display = data.downloadable ? "" : "none";
+    if (data.downloadable) {
+      downloadBtn.disabled = false;
+      downloadBtn.textContent = "Download to library";
+    }
+  } catch (e) {}
+}
+
+function mediaPlayPause() {
+  const url = currentMediaSource === "music-tool" ? "/media/music/api/toggle" : "/controls/media/playpause";
+  runAction(url);
+  setTimeout(loadMedia, 300);
+}
+
+function stepLocalTrack(dir) {
+  if (!library.length) return;
+  const idx = library.findIndex(t => t.filename === currentMediaFilename);
+  const nextIdx = idx === -1 ? 0 : (idx + dir + library.length) % library.length;
+  const t = library[nextIdx];
+  postJSON("/media/music/api/play", { filename: t.filename, title: t.title });
+  setTimeout(loadMedia, 300);
+}
+
+function mediaPrev() {
+  if (currentMediaSource === "music-tool") { stepLocalTrack(-1); return; }
+  runAction("/controls/media/prev");
+  setTimeout(loadMedia, 300);
+}
+function mediaNext() {
+  if (currentMediaSource === "music-tool") { stepLocalTrack(1); return; }
+  runAction("/controls/media/next");
+  setTimeout(loadMedia, 300);
+}
+
+const npSeekEl = document.getElementById("np-seek");
+npSeekEl.addEventListener("input", () => { seeking = true; });
+npSeekEl.addEventListener("change", () => {
+  seeking = false;
+  if (currentMediaSource !== "music-tool") return; // disabled anyway
+  postJSON("/media/music/api/seek", { position: Number(npSeekEl.value) });
+});
+
+async function downloadCurrentTrack() {
+  const btn = document.getElementById("np-download");
+  btn.disabled = true;
+  btn.textContent = "Downloading\u2026";
+  try {
+    const data = await postJSON("/media/music/api/download_current", {});
+    if (data.status === "error") {
+      setStatus("Error: " + data.message);
+      btn.disabled = false;
+      btn.textContent = "Download to library";
+      return;
+    }
+    btn.textContent = "Downloaded \u2713";
+    setStatus("Downloaded " + (data.track && data.track.title ? data.track.title : "track") + ".");
+  } catch (e) {
+    setStatus("Download failed.");
+    btn.disabled = false;
+    btn.textContent = "Download to library";
+  }
 }
 
 // --- Brightness ---
@@ -143,9 +401,14 @@ async function loadBrightness() {
   try {
     const res = await fetch("/controls/brightness/status");
     const data = await res.json();
-    document.getElementById("brightness-status").textContent = data.error
-      ? "Brightness: " + data.error
-      : "Brightness: " + data.percent + "%";
+    const fill = document.getElementById("brightness-fill");
+    if (data.error) {
+      document.getElementById("brightness-status").textContent = data.error;
+      fill.style.width = "0%";
+      return;
+    }
+    document.getElementById("brightness-status").textContent = data.percent + "%";
+    fill.style.width = data.percent + "%";
   } catch (e) {}
 }
 let allApps = [];
@@ -183,8 +446,8 @@ let camStream = null, camInterval = null, camOn = false;
 let micStream = null, micRecorder = null, micOn = false;
 
 function updateStreamStatus() {
-  document.getElementById("stream-status").textContent =
-    "Camera: " + (camOn ? "on" : "off") + " | Mic: " + (micOn ? "on" : "off");
+  document.getElementById("camera-dot").classList.toggle("is-on", camOn);
+  document.getElementById("mic-dot").classList.toggle("is-on", micOn);
   document.getElementById("camera-toggle").textContent = camOn ? "Turn camera off" : "Turn camera on";
   document.getElementById("mic-toggle").textContent = micOn ? "Turn mic off" : "Turn mic on";
 }
@@ -298,6 +561,7 @@ function refreshScreenshot() {
 
 function toggleAutoRefresh() {
   const on = document.getElementById("auto-refresh").checked;
+  document.getElementById("screen-wrap").classList.toggle("is-live", on);
   if (autoRefreshTimer) clearInterval(autoRefreshTimer);
   autoRefreshTimer = on ? setInterval(refreshScreenshot, 2000) : null;
 }
@@ -518,11 +782,15 @@ async function loadState() {
 }
 
 document.getElementById("screenshot").addEventListener("load", () => updateViewportOutline);
+updateStreamStatus();
 loadApps();
 loadVolume();
 loadBrightness();
+loadMedia();
+loadLibrary();
 loadState();
 setInterval(loadState, 4000);
+setInterval(loadMedia, 2000);
   </script>
 </div>
 </main>

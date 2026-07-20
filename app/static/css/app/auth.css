@@ -13,26 +13,6 @@
   letter-spacing: -0.01em;
   margin-bottom: 8px;
 }
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: var(--fs-base);
-  color: var(--text-faint);
-  margin-bottom: 20px;
-  transition: color 0.15s ease;
-}
-.back-link:hover, .back-link:focus-visible { color: var(--accent); }
-.btn--primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #0b0c0f;
-}
-.btn--primary:hover, .btn--primary:focus-visible {
-  background: var(--accent-dim);
-  border-color: var(--accent-dim);
-}
 .auth-panel .auth-note {
   font-size: var(--fs-base);
   color: var(--text-dim);
@@ -57,8 +37,8 @@
   outline: none;
   border-color: var(--accent-dim);
 }
-.auth-panel button[type="submit"] {
-  justify-self: start;
+.auth-panel .btn-row {
+  margin-top: 4px;
 }
 .auth-panel .error {
   font-size: var(--fs-base);

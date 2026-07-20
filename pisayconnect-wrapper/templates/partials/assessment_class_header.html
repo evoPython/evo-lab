@@ -1,0 +1,20 @@
+{% if class_info %}
+<h2 class="card-title">{{ class_info.course_code }}{% if class_info.course_name %} · {{ class_info.course_name }}{% endif %}</h2>
+<p class="card-subtitle">
+    {% if class_info.description %}{{ class_info.description }}{% endif %}
+    {% if class_info.schedule %} · {{ class_info.schedule }}{% endif %}
+</p>
+<div class="assessment-summary-row">
+    <span class="summary-chip">{{ class_info.total_submitted }}/{{ class_info.total_count }} submitted</span>
+    <span class="summary-chip">{{ class_info.completed_percent }}% complete</span>
+    {% if class_info.pending_count %}
+    <span class="summary-chip summary-chip-warning">{{ class_info.pending_count }} pending</span>
+    {% endif %}
+    {% if class_info.notification_count %}
+    <span class="summary-chip summary-chip-alert">{{ class_info.notification_count }} new</span>
+    {% endif %}
+</div>
+{% else %}
+<h2 class="card-title">Subject assessments</h2>
+<p class="card-subtitle">Enrollment class #{{ enrollment_class_id }}</p>
+{% endif %}

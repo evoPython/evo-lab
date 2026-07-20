@@ -1,0 +1,31 @@
+<div class="card cache-managed" data-cache-refresh="{{ cache_refresh_url }}">
+    <div class="card-header-row">
+        <h2 class="card-title">Bulletin Board</h2>
+        <div class="sync-status" aria-live="polite" data-state="idle">
+            <span class="sync-status-indicator" aria-hidden="true"></span>
+            <span class="sync-status-text">Up to date</span>
+        </div>
+    </div>
+
+    {% set prev_url = '/app/bulletin-board?page=' ~ (page - 1) if page > 1 else none %}
+    {% set next_url = '/app/bulletin-board?page=' ~ (page + 1) if has_next else none %}
+    {% with page=page, prev_url=prev_url, next_url=next_url, pagination_id='pagination', spa_link=true %}
+    {% include "partials/pagination.html" %}
+    {% endwith %}
+
+    <div id="bulletin-list">
+        {% if data %}
+        <div class="post-list">
+            {% include "partials/bulletin_list.html" %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>No bulletin posts on this page.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {% with page=page, prev_url=prev_url, next_url=next_url, pagination_id='pagination-bottom', spa_link=true, pagination_class='pagination-bottom' %}
+    {% include "partials/pagination.html" %}
+    {% endwith %}
+</div>

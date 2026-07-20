@@ -1,0 +1,19 @@
+<div class="card cache-managed" data-cache-refresh="{{ cache_refresh_url }}">
+    <div class="card-header-row">
+        <h2 class="card-title">Bookmarks</h2>
+        <div class="sync-status" aria-live="polite" data-state="idle">
+            <span class="sync-status-indicator" aria-hidden="true"></span>
+            <span class="sync-status-text">Up to date</span>
+        </div>
+    </div>
+
+    <div id="post-list">
+        {% if data %}
+        <div class="post-list">
+            {% include "partials/bookmark_list.html" %}
+        </div>
+        {% else %}
+        {% include "partials/empty_posts.html" %}
+        {% endif %}
+    </div>
+</div>

@@ -3,18 +3,18 @@ import sqlite3
 import threading
 import time
 
-import psutil
+from app.dashboard.system import get_battery
 
 
 # Logged on a steady clock rather than jittered — the point of a
 # fixed interval is that gaps in the timeline (system asleep,
 # service restarted) are easy to spot as gaps, instead of blurring
 # into normal sampling noise.
-LOG_INTERVAL_SECONDS = 60
+LOG_INTERVAL_SECONDS = 30
 
-# A week of samples at one per minute is ~10k rows — trivial for
-# sqlite, and covers the longest range the dashboard offers (1w).
-RETENTION_HOURS = 24 * 7
+# A month of samples at one per 30s is ~86k rows — still trivial for
+# sqlite, and covers the longest range the dashboard offers (1month).
+RETENTION_HOURS = 24 * 31
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "battery_history.db")
 
@@ -34,24 +34,28 @@ def _ensure_db():
             )
             """
         )
+        # Migration for dbs created before wattage logging existed.
+        try:
+            conn.execute("ALTER TABLE battery_samples ADD COLUMN watts REAL")
+        except sqlite3.OperationalError:
+            pass  # column already there
 
 
 def _log_once():
-    # psutil.sensors_battery() reads /sys/class/power_supply under the
-    # hood on Linux (Arch included) via the kernel's power_supply
-    # class, so there's nothing Arch-specific to shell out to here —
-    # no acpi/upower calls needed, this works the same everywhere
-    # psutil supports a battery at all. Desktops without a battery
-    # (or a VM) just get None back, so we skip the write.
-    battery = psutil.sensors_battery()
+    # get_battery() reads /sys/class/power_supply under the hood on
+    # Linux (Arch included) — no acpi/upower shelling out needed —
+    # and also gives us wattage + 2-decimal percent on top of what
+    # raw psutil.sensors_battery() exposes. Desktops without a
+    # battery (or a VM) just get None back, so we skip the write.
+    battery = get_battery()
     if not battery:
         return
 
     now = int(time.time())
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
-            "INSERT OR REPLACE INTO battery_samples (ts, percent, charging) VALUES (?, ?, ?)",
-            (now, float(battery.percent), int(battery.power_plugged)),
+            "INSERT OR REPLACE INTO battery_samples (ts, percent, charging, watts) VALUES (?, ?, ?, ?)",
+            (now, float(battery["percent"]), int(battery["charging"]), battery["watts"]),
         )
         cutoff = now - RETENTION_HOURS * 3600
         conn.execute("DELETE FROM battery_samples WHERE ts < ?", (cutoff,))
@@ -98,7 +102,7 @@ def get_history(hours=12, max_points=60):
 
     with sqlite3.connect(DB_PATH) as conn:
         rows = conn.execute(
-            "SELECT ts, percent, charging FROM battery_samples WHERE ts >= ? ORDER BY ts ASC",
+            "SELECT ts, percent, charging, watts FROM battery_samples WHERE ts >= ? ORDER BY ts ASC",
             (cutoff,),
         ).fetchall()
 
@@ -107,16 +111,21 @@ def get_history(hours=12, max_points=60):
 
     if len(rows) <= max_points:
         return [
-            {"ts": ts, "percent": round(percent, 1), "charging": bool(charging)}
-            for ts, percent, charging in rows
+            {
+                "ts": ts,
+                "percent": round(percent, 1),
+                "charging": bool(charging),
+                "watts": round(watts, 2) if watts is not None else None,
+            }
+            for ts, percent, charging, watts in rows
         ]
 
     span = rows[-1][0] - rows[0][0]
     bucket_span = (span / max_points) or 1
     buckets = {}
-    for ts, percent, charging in rows:
+    for ts, percent, charging, watts in rows:
         idx = int((ts - rows[0][0]) / bucket_span)
-        buckets.setdefault(idx, []).append((ts, percent, charging))
+        buckets.setdefault(idx, []).append((ts, percent, charging, watts))
 
     history = []
     for idx in sorted(buckets):
@@ -124,10 +133,13 @@ def get_history(hours=12, max_points=60):
         avg_ts = int(sum(b[0] for b in bucket) / len(bucket))
         avg_percent = sum(b[1] for b in bucket) / len(bucket)
         any_charging = any(b[2] for b in bucket)
+        watt_vals = [b[3] for b in bucket if b[3] is not None]
+        avg_watts = (sum(watt_vals) / len(watt_vals)) if watt_vals else None
         history.append({
             "ts": avg_ts,
             "percent": round(avg_percent, 1),
             "charging": any_charging,
+            "watts": round(avg_watts, 2) if avg_watts is not None else None,
         })
     return history
 

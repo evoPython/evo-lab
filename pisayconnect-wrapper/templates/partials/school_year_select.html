@@ -1,0 +1,10 @@
+{% if school_years %}
+<label class="schoolyear-select-wrap">
+    <span class="sr-only">School year</span>
+    <select class="schoolyear-select" data-view="{{ view }}" aria-label="School year">
+        {% for year in school_years %}
+        <option value="{{ year }}"{% if year == selected_school_year %} selected{% endif %}>{{ year }}</option>
+        {% endfor %}
+    </select>
+</label>
+{% endif %}

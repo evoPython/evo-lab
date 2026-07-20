@@ -24,6 +24,7 @@ def create_app():
 
     # Make sure the upload directory and db directory exist on startup.
     os.makedirs(app.config["UPLOAD_DIR"], exist_ok=True)
+    os.makedirs(app.config["MUSIC_DIR"], exist_ok=True)
     os.makedirs(os.path.dirname(app.config["DB_PATH"]), exist_ok=True)
 
     from app.core.db import init_db

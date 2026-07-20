@@ -35,10 +35,28 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&display=swap" rel="stylesheet">
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Styles: loaded as direct <link> tags (not @import — @import
+       chains are render-blocking and serial, so this used to be one
+       file that itself pulled in 14 more, one after another, before
+       the browser could even start painting). Same cascade order as
+       the old style.css manifest, just fetched in parallel instead. -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base/variables.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base/reset.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base/transitions.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/home/home.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/home/about.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/home/projects.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/home/letter.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/home/fun.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/app-nav.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/auth.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/tools.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/page-shell.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/remote-dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/cross-remote.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/inbox.css') }}">
 </head>
 <body>
   <a class="skip-link" href="#stage">skip to content</a>

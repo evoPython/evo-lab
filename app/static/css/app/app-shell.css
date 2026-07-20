@@ -284,13 +284,20 @@ html:has(.app-body) {
 /* ── Content area ───────────────────────────────────────────── */
 .app-content {
   padding-top: var(--header-h);
+  /* --player-h is set by music-player.js only on pages that include
+     the now-playing bar; falls back to 0 everywhere else. */
+  padding-bottom: var(--player-h, 0px);
   min-height: 100vh;
-  animation: app-content-in 0.35s var(--ease);
+  /* Fast, quiet settle-in — this is the ONLY entry animation for
+     app-shell pages now (see base/transitions.css). Short duration
+     and no vertical travel so it reads as "snappy" rather than a
+     fade you have to wait out on every tap. */
+  animation: app-content-in 0.14s ease-out both;
 }
 
 @keyframes app-content-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* ── Desktop: permanent sidebar ─────────────────────────────── */

@@ -13,9 +13,11 @@
   display: flex;
   align-items: baseline;
   gap: 12px;
-  margin-bottom: 4px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 .rc-head h1 { font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: 700; }
+.rc-head__hint { font-size: var(--fs-sm); color: var(--text-faint); }
 .rc-status {
   position: fixed;
   left: 50%;
@@ -69,6 +71,20 @@
 .rc-group__summary::-webkit-details-marker { display: none; }
 .rc-group__summary:hover { background: var(--panel-hover); }
 .rc-group__summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.rc-group__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 14px;
+  line-height: 1;
+}
 
 .rc-group__chevron {
   flex-shrink: 0;
@@ -137,6 +153,202 @@
   border-color: var(--accent-dim, var(--accent));
   background: var(--accent-soft, rgba(255, 255, 255, 0.06));
 }
+
+.rc-panel__headrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---- Power: icon tiles instead of plain text buttons ---- */
+.rc-tilerow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.rc-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 68px;
+  padding: 10px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  color: var(--text-dim);
+  font-family: var(--font-display);
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.rc-tile:hover, .rc-tile:focus-visible { color: var(--text); background: var(--panel-hover); border-color: var(--border-strong); }
+.rc-tile:active { transform: translateY(1px); }
+.rc-tile__icon { font-size: 20px; line-height: 1; color: var(--accent); }
+.rc-tile__label { font-size: var(--fs-sm); }
+.rc-tile--danger .rc-tile__icon { color: var(--danger); }
+.rc-tile--danger:hover, .rc-tile--danger:focus-visible {
+  border-color: rgba(224, 138, 122, 0.45);
+  background: rgba(224, 138, 122, 0.08);
+}
+
+/* ---- Volume / brightness: label + value + fill meter ---- */
+.rc-level + .rc-level { margin-top: 14px; }
+.rc-level__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.rc-level__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.rc-level__value { font-size: var(--fs-base); color: var(--text); }
+.rc-meter {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--panel-hover);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.rc-meter__fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.25s var(--ease);
+}
+.rc-meter__fill.is-muted { background: var(--text-faint); }
+
+/* ---- Playback: now-playing info from playerctl ---- */
+.rc-now-playing { margin-bottom: 10px; }
+.rc-now-playing__title {
+  font-size: var(--fs-base);
+  color: var(--text);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rc-now-playing__artist {
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-height: 1em;
+}
+.rc-now-playing__source {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  min-height: 1em;
+}
+.rc-meter--np { margin-bottom: 4px; }
+.rc-np-seek {
+  width: 100%;
+  display: block;
+  margin-bottom: 4px;
+}
+.rc-np-seek:disabled { opacity: 0.4; }
+.rc-now-playing__time {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* ---- Playback: circular transport controls ---- */
+.rc-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 6px 0 2px;
+}
+.rc-transport__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text-dim);
+  font-size: 16px;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.rc-transport__btn:hover, .rc-transport__btn:focus-visible {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--panel-hover);
+}
+.rc-transport__btn:active { transform: scale(0.94); }
+.rc-transport__btn--main {
+  width: 58px;
+  height: 58px;
+  font-size: 22px;
+  color: #0b0c0f;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.rc-transport__btn--main:hover, .rc-transport__btn--main:focus-visible {
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+  color: #0b0c0f;
+}
+
+/* ---- Status dots (streaming on/off) ---- */
+.rc-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--text-faint);
+  margin: 0 6px 0 12px;
+  vertical-align: middle;
+}
+.rc-dot:first-child { margin-left: 0; }
+.rc-dot.is-on {
+  background: var(--ok);
+  box-shadow: 0 0 0 3px var(--ok-soft);
+}
+
+/* ---- Live badge over the screenshot when auto-refresh is on ---- */
+.rc-live-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: none;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--danger);
+  background: rgba(11, 12, 15, 0.72);
+  border: 1px solid rgba(224, 138, 122, 0.4);
+  border-radius: 999px;
+  padding: 3px 9px 3px 7px;
+}
+.rc-live-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--danger);
+}
+.rc-screen-wrap.is-live .rc-live-badge { display: inline-flex; }
 
 .rc-search {
   width: 100%;
@@ -283,4 +495,18 @@
 
 @media (min-width: 900px) {
   .rc-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Power tiles: 2-up on phones, a single row from tablet width up */
+@media (min-width: 420px) {
+  .rc-tilerow { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* Audio & Media keeps its own 2-column rhythm (levels | playback)
+   regardless of how many columns the surrounding .rc-grid uses at
+   wider breakpoints. */
+.rc-grid--2col { grid-template-columns: 1fr !important; }
+.rc-grid--2col .rc-panel--span2 { grid-column: auto !important; }
+@media (min-width: 560px) {
+  .rc-grid--2col { grid-template-columns: 1.3fr 1fr !important; }
 }

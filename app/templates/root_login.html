@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "app_base.html" %}
 
 {% block title %}Root Login{% endblock %}
 
@@ -15,7 +15,9 @@
 
   <form method="post">
     <input type="password" name="password" placeholder="root password" required autocomplete="current-password">
-    <button type="submit" class="btn btn--primary">Log in</button>
+    <div class="btn-row">
+      <button type="submit" class="btn btn--primary">Log in</button>
+    </div>
   </form>
 </div>
 </main>

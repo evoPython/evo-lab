@@ -1,0 +1,10 @@
+{% if view == 'bookmarks' %}
+<div class="empty-state">
+    <p>No bookmarks yet.</p>
+    <a href="/app/classwall" data-spa-link>Browse the class wall</a>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No posts on this page.</p>
+</div>
+{% endif %}

@@ -1,0 +1,91 @@
+{% if grading_summary %}
+<div class="grade-summary-list">
+{% for period in grading_summary %}
+<section class="grade-period-card">
+    <header class="grade-period-header">
+        <div class="grade-period-heading">
+            <h4 class="grade-period-title">{{ period.name or period.code or "Grading period" }}</h4>
+            {% if period.code and period.name %}
+            <span class="grade-period-code">{{ period.code }}</span>
+            {% endif %}
+        </div>
+        <div class="grade-period-score-badge">
+            <span class="grade-period-score-label">Period grade</span>
+            <span class="grade-period-score">{{ period.period_grade_display }}</span>
+        </div>
+    </header>
+
+    {% if period.components %}
+    <div class="grade-table-wrap">
+        <table class="grade-table">
+            <thead>
+                <tr>
+                    <th>Component</th>
+                    <th class="grade-col-num">Scores</th>
+                    <th class="grade-col-num">Raw %</th>
+                    <th class="grade-col-num">Weighted</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for comp in period.components %}
+                {% set comp_key = loop.index0 %}
+                <tr class="grade-component-row{% if comp.entries %} has-entries{% endif %}"
+                    {% if comp.entries %}
+                    data-grade-component="{{ comp_key }}"
+                    tabindex="0"
+                    role="button"
+                    aria-expanded="false"
+                    {% endif %}>
+                    <td class="grade-col-component">
+                        <span class="grade-component-name">{{ comp.name }}</span>
+                        {% if comp.code %}<span class="grade-component-code">{{ comp.code }}</span>{% endif %}
+                    </td>
+                    <td class="grade-col-num">{{ comp.score_total_display }}</td>
+                    <td class="grade-col-num">{{ comp.raw_percent_display }}</td>
+                    <td class="grade-col-num grade-col-weighted">{{ comp.weighted_contribution_display }}</td>
+                </tr>
+                {% for entry in comp.entries %}
+                <tr class="grade-entry-row" data-grade-parent="{{ comp_key }}" hidden>
+                    <td class="grade-col-component grade-col-entry">
+                        <span class="grade-entry-name">{{ entry.description or "Assessment" }}</span>
+                    </td>
+                    <td class="grade-col-num">
+                        {% if entry.score_display %}
+                        {{ entry.score_display }}
+                        {% elif entry.is_submitted %}
+                        <span class="grade-entry-pending">Not yet posted</span>
+                        {% else %}
+                        <span class="grade-entry-pending">Not submitted</span>
+                        {% endif %}
+                    </td>
+                    <td class="grade-col-num">{{ entry.raw_percent_display }}</td>
+                    <td class="grade-col-num">{{ entry.weighted_contribution_display }}</td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if period.computation_lines %}
+    <details class="grade-computation-details">
+        <summary class="grade-computation-summary">Show computation</summary>
+        <div class="grade-computation">
+            {% for line in period.computation_lines %}
+            <p class="grade-computation-line">{{ line }}</p>
+            {% endfor %}
+            {% if period.period_grade is not none %}
+            <p class="grade-computation-line grade-computation-sum">{{ period.computation_summary }}</p>
+            {% endif %}
+        </div>
+    </details>
+    {% endif %}
+    {% else %}
+    <p class="grade-empty">No scored components for this period.</p>
+    {% endif %}
+</section>
+{% endfor %}
+</div>
+{% else %}
+<p class="grade-empty">No graded assessments available yet.</p>
+{% endif %}

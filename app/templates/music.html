@@ -1,0 +1,725 @@
+{% extends "app_base.html" %}
+
+{% block title %}Music{% endblock %}
+
+{% block content %}
+<main class="stage" id="stage">
+<div class="page-shell music-shell">
+  <a class="back-link mono" href="/tools">&larr; back to tools</a>
+  <h1 class="mono">music</h1>
+
+  <!-- Search -->
+  <section class="music-section">
+    <div class="music-section__head">
+      <h2 class="h2" style="margin:0;">search youtube</h2>
+    </div>
+    <div class="form-row">
+      <input type="text" id="search-input" placeholder="search YouTube to download..." autocomplete="off">
+      <button class="btn btn--primary" id="search-btn" onclick="doSearch()">Search</button>
+    </div>
+    <div class="music-list" id="search-results"></div>
+  </section>
+
+  <!-- Playlists -->
+  <section class="music-section">
+    <div class="music-section__head">
+      <h2 class="h2" style="margin:0;">playlists</h2>
+      <button class="btn btn--sm btn--ghost" onclick="newPlaylist()">+ New</button>
+    </div>
+    <div class="music-list" id="playlist-list"></div>
+  </section>
+
+  <!-- Library -->
+  <section class="music-section">
+    <div class="music-section__head">
+      <h2 class="h2" style="margin:0;">library</h2>
+      <div class="btn-row">
+        <a class="btn btn--sm btn--ghost" href="/media/music/artists">Artists</a>
+        <button class="btn btn--sm btn--ghost" onclick="loadLibrary()">Refresh</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <input type="text" id="library-filter" class="pl-search" placeholder="search your library..." autocomplete="off" style="flex:1;">
+      <select id="library-sort" class="pl-search" style="flex:0 0 auto; width:auto;">
+        <option value="title_asc">Title (A&ndash;Z)</option>
+        <option value="title_desc">Title (Z&ndash;A)</option>
+        <option value="artist_asc">Artist (A&ndash;Z)</option>
+        <option value="added_desc">Recently added</option>
+        <option value="added_asc">Oldest added</option>
+      </select>
+    </div>
+    <div class="music-list" id="library-list">
+      <p class="filelist__empty">Loading library&hellip;</p>
+    </div>
+  </section>
+</div>
+<div class="music-scroll-spacer" aria-hidden="true"></div>
+<div class="music-toasts" id="music-toasts" aria-live="polite"></div>
+
+{% include "_player_bar.html" %}
+
+<script>
+// Playback, output-mode, next/prev, and cross-device sync all live in
+// the shared static/js/music-player.js (loaded by _player_bar.html),
+// which owns window.library / window.loadLibrary / window.playTrack.
+// This page's script only handles search + the library list UI.
+let pendingDownloads = [];   // [{ key, title, uploader, status: 'downloading'|'error', message }]
+let libraryFilter = '';
+let librarySort = 'title_asc';
+let playingFilename = null;  // filename of the row we last hit "Play" on, for the highlight
+let manageTrack = null;      // filename of the library row whose "Manage song" panel is open
+
+// Lightweight fuzzy match: exact substring anywhere, or the query's
+// characters found in order (not necessarily adjacent). Cheap and
+// forgiving enough for filtering a personal music library by title/artist.
+function fuzzyMatch(query, text) {
+  query = (query || '').toLowerCase().trim();
+  text = (text || '').toLowerCase();
+  if (!query) return true;
+  if (text.includes(query)) return true;
+  let qi = 0;
+  for (let i = 0; i < text.length && qi < query.length; i++) {
+    if (text[i] === query[qi]) qi++;
+  }
+  return qi === query.length;
+}
+function fuzzyFilterTracks(query, tracks) {
+  if (!query) return tracks;
+  return tracks.filter(t => fuzzyMatch(query, t.title) || fuzzyMatch(query, t.uploader || ''));
+}
+
+function sortTracks(tracks, sort) {
+  const arr = tracks.slice();
+  const byText = (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' });
+  switch (sort) {
+    case 'title_desc':
+      arr.sort((a, b) => byText(b.title || '', a.title || ''));
+      break;
+    case 'artist_asc':
+      arr.sort((a, b) => byText(a.uploader || '', b.uploader || ''));
+      break;
+    case 'added_desc':
+      arr.sort((a, b) => (b.added_at || 0) - (a.added_at || 0));
+      break;
+    case 'added_asc':
+      arr.sort((a, b) => (a.added_at || 0) - (b.added_at || 0));
+      break;
+    case 'title_asc':
+    default:
+      arr.sort((a, b) => byText(a.title || '', b.title || ''));
+      break;
+  }
+  return arr;
+}
+
+function fmtTime(sec) {
+  if (sec == null || isNaN(sec)) return '0:00';
+  sec = Math.max(0, Math.floor(sec));
+  const m = Math.floor(sec / 60);
+  const s = String(sec % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// "Good Kid" + "Cicada" -> "Good Kid - Cicada" for the bold title line;
+// the uploader still gets its own faded line underneath separately.
+function displayTitle(title, uploader) {
+  return uploader ? `${uploader} - ${title}` : title;
+}
+
+// --- Toast feedback: real, visible confirmation for actions taken
+// ("Playing...", "Stopped.", "Created playlist...") rather than
+// leaving the user to guess whether a click did anything. ---
+function toast(message, type = '') {
+  const wrap = document.getElementById('music-toasts');
+  const el = document.createElement('div');
+  el.className = 'music-toast' + (type ? ' music-toast--' + type : '');
+  el.textContent = message;
+  wrap.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('is-leaving');
+    setTimeout(() => el.remove(), 200);
+  }, 2400);
+}
+
+async function postJSON(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {}),
+  });
+  return res.json();
+}
+
+// --- Library (data comes from the shared window.library / loadLibrary) ---
+
+let didSyncPlayingOnLoad = false;
+
+// Keeps playingFilename in sync with whatever's actually playing on
+// the laptop, not just what we last clicked "Play" on — so auto-advance
+// to the next track, or playback started/stopped from another device
+// (phone, remote.html), still moves the highlight here without a
+// manual refresh. Explicitly clears it when nothing/other-media is
+// playing, not just when our own track is.
+async function syncPlayingFromServer() {
+  try {
+    const res = await fetch('/media/music/api/now_playing');
+    const data = await res.json();
+    playingFilename = (data.source === 'music-tool' && data.filename) ? data.filename : null;
+  } catch (err) {
+    // Transient network error — leave the highlight as-is and try again next tick.
+  }
+}
+
+async function tickPlayingSync() {
+  if (document.hidden) return; // tab backgrounded — skip this request entirely
+  const prev = playingFilename;
+  await syncPlayingFromServer();
+  if (playingFilename !== prev) renderLibrary();
+}
+
+window.onLibraryLoaded = function() {
+  if (!didSyncPlayingOnLoad) {
+    didSyncPlayingOnLoad = true;
+    syncPlayingFromServer().then(renderLibrary);
+    setInterval(tickPlayingSync, 4000);
+    // Catch up right away on whatever changed while the tab was hidden,
+    // instead of waiting up to 4s for the next tick after switching back.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) tickPlayingSync();
+    });
+    return;
+  }
+  renderLibrary();
+};
+
+const LIBRARY_PAGE_SIZE = 40;
+let libraryPageCount = LIBRARY_PAGE_SIZE; // how many filtered tracks are currently shown
+
+function renderLibrary() {
+  const el = document.getElementById('library-list');
+  const filtered = sortTracks(fuzzyFilterTracks(libraryFilter, window.library), librarySort);
+  const library = filtered.slice(0, libraryPageCount);
+  const remaining = filtered.length - library.length;
+
+  const pendingHtml = pendingDownloads.map(p => `
+    <div class="music-row music-row--pending${p.status === 'error' ? ' music-row--error' : ''}">
+      <div class="music-row__info">
+        <span class="music-row__title">${escapeHtml(displayTitle(p.title, p.uploader))}</span>
+        <span class="music-row__meta mono">${pendingStatusHtml(p)}</span>
+      </div>
+      <div class="music-row__actions">
+        ${p.status === 'error'
+          ? `<button class="btn btn--sm" data-action="dismiss-pending" data-key="${escapeHtml(p.key)}">Dismiss</button>`
+          : ''}
+      </div>
+    </div>
+  `).join('');
+
+  if (!library.length && !pendingDownloads.length) {
+    el.innerHTML = window.library.length
+      ? '<p class="filelist__empty">No matches.</p>'
+      : '<p class="filelist__empty">No tracks downloaded yet — search above.</p>';
+    return;
+  }
+
+  const libraryHtml = library.map(t => `
+    <div class="music-row${t.filename === playingFilename ? ' is-playing' : ''}">
+      <div class="music-row__info">
+        <span class="music-row__title">${escapeHtml(displayTitle(t.title, t.uploader))}</span>
+        <span class="music-row__meta mono">${t.uploader ? escapeHtml(t.uploader) + ' &middot; ' : ''}${fmtTime(t.duration)}</span>
+      </div>
+      <div class="music-row__actions">
+        <button class="btn btn--sm btn--primary" data-action="play"
+          data-filename="${escapeHtml(t.filename)}" data-title="${escapeHtml(t.title)}" data-uploader="${escapeHtml(t.uploader || '')}">Play</button>
+        <div class="menu">
+          <button class="btn btn--sm btn--ghost menu__trigger" data-action="lib-menu" aria-haspopup="true" aria-expanded="false" aria-label="More options">&#8942;</button>
+          <div class="menu__panel" role="menu">
+            <button role="menuitem" data-action="lib-manage" data-filename="${escapeHtml(t.filename)}">${t.filename === manageTrack ? 'Close manage' : 'Manage song'}</button>
+            <button role="menuitem" class="menu__item--danger" data-action="lib-delete" data-filename="${escapeHtml(t.filename)}">Delete song</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${t.filename === manageTrack ? renderLibraryManagePanel(t) : ''}
+  `).join('');
+
+  const loadMoreHtml = remaining > 0
+    ? `<button class="btn btn--ghost btn--block" data-action="load-more">Show ${Math.min(remaining, LIBRARY_PAGE_SIZE)} more (${remaining} left)</button>`
+    : '';
+
+  el.innerHTML = pendingHtml + libraryHtml + loadMoreHtml;
+}
+
+function renderLibraryManagePanel(t) {
+  return `
+    <div class="playlist-manage">
+      <label class="dim" style="font-size:var(--fs-sm); display:block; margin-bottom:4px;">title</label>
+      <input type="text" class="pl-search" id="lib-edit-title" value="${escapeHtml(t.title)}" autocomplete="off">
+      <label class="dim" style="font-size:var(--fs-sm); display:block; margin:12px 0 4px;">author</label>
+      <input type="text" class="pl-search" id="lib-edit-uploader" value="${escapeHtml(t.uploader || '')}" autocomplete="off" placeholder="unknown">
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn btn--sm btn--primary" data-action="lib-save" data-filename="${escapeHtml(t.filename)}">Save</button>
+        <button class="btn btn--sm btn--ghost" data-action="lib-cancel">Cancel</button>
+      </div>
+    </div>`;
+}
+
+function pendingStatusHtml(p) {
+  if (p.status === 'error') {
+    return 'Download failed' + (p.message ? ': ' + escapeHtml(p.message) : '');
+  }
+  if (p.status === 'processing') {
+    return '<span class="music-spinner" aria-hidden="true"></span> Converting to mp3&hellip;';
+  }
+  const sizes = p.total
+    ? `${fmtBytes(p.downloaded)} / ${fmtBytes(p.total)}`
+    : (p.downloaded ? fmtBytes(p.downloaded) : 'Starting&hellip;');
+  const speed = p.speed ? ` &middot; ${fmtSpeed(p.speed)}` : '';
+  return `<span class="music-spinner" aria-hidden="true"></span> ${sizes}${speed}`;
+}
+
+function fmtBytes(n) {
+  if (!n && n !== 0) return '';
+  const mb = n / (1024 * 1024);
+  return mb >= 1 ? mb.toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+}
+function fmtSpeed(bytesPerSec) {
+  if (!bytesPerSec) return '';
+  return fmtBytes(bytesPerSec) + '/s';
+}
+
+document.getElementById('library-filter').addEventListener('input', e => {
+  libraryFilter = e.target.value;
+  libraryPageCount = LIBRARY_PAGE_SIZE; // filtering starts back at page 1
+  renderLibrary();
+});
+
+document.getElementById('library-sort').addEventListener('change', e => {
+  librarySort = e.target.value;
+  renderLibrary();
+});
+
+document.getElementById('library-list').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.target.id === 'lib-edit-title' || e.target.id === 'lib-edit-uploader')) {
+    e.preventDefault();
+    saveTrackEdits(manageTrack);
+  }
+});
+
+document.getElementById('library-list').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const { action, filename } = btn.dataset;
+
+  if (action === 'play') {
+    playTrack(filename, btn.dataset.title, btn.dataset.uploader);
+    playingFilename = filename;
+    toast(`Playing "${btn.dataset.title}".`);
+    renderLibrary();
+  } else if (action === 'lib-menu') {
+    const panel = btn.parentElement.querySelector('.menu__panel');
+    const willOpen = !panel.classList.contains('is-open');
+    document.querySelectorAll('.menu__panel.is-open').forEach(p => p.classList.remove('is-open'));
+    panel.classList.toggle('is-open', willOpen);
+    btn.setAttribute('aria-expanded', String(willOpen));
+  } else if (action === 'lib-manage') {
+    manageTrack = manageTrack === filename ? null : filename;
+    renderLibrary();
+  } else if (action === 'lib-cancel') {
+    manageTrack = null;
+    renderLibrary();
+  } else if (action === 'lib-save') {
+    saveTrackEdits(filename);
+  } else if (action === 'lib-delete') {
+    deleteTrack(filename);
+  } else if (action === 'dismiss-pending') {
+    pendingDownloads = pendingDownloads.filter(p => p.key !== btn.dataset.key);
+    renderLibrary();
+  } else if (action === 'load-more') {
+    libraryPageCount += LIBRARY_PAGE_SIZE;
+    renderLibrary();
+  }
+});
+
+async function saveTrackEdits(filename) {
+  const title = document.getElementById('lib-edit-title').value.trim();
+  const uploader = document.getElementById('lib-edit-uploader').value.trim();
+  if (!title) { alert('Title can\'t be empty.'); return; }
+  const res = await fetch('/media/music/api/library/' + encodeURIComponent(filename), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, uploader }),
+  });
+  const data = await res.json();
+  if (data.status === 'error') { alert(data.message); return; }
+  manageTrack = null;
+  await loadLibrary();
+  toast('Updated song info.');
+}
+
+async function deleteTrack(filename) {
+  if (!confirm('Delete this track from the laptop?')) return;
+  await fetch('/media/music/api/library/' + encodeURIComponent(filename), { method: 'DELETE' });
+  if (playingFilename === filename) playingFilename = null;
+  if (manageTrack === filename) manageTrack = null;
+  toast('Deleted from library.');
+  loadLibrary();
+}
+
+// --- Search ---
+
+document.getElementById('search-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+
+async function doSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  const el = document.getElementById('search-results');
+  if (!q) return;
+  el.innerHTML = '<p class="filelist__empty">Searching&hellip;</p>';
+  try {
+    const res = await fetch('/media/music/api/search?q=' + encodeURIComponent(q));
+    const data = await res.json();
+    if (data.status === 'error') {
+      el.innerHTML = `<p class="filelist__empty">${escapeHtml(data.message)}</p>`;
+      return;
+    }
+    const results = data.results || [];
+    if (!results.length) {
+      el.innerHTML = '<p class="filelist__empty">No results.</p>';
+      return;
+    }
+    el.innerHTML = results.map(r => `
+      <div class="music-row">
+        <div class="music-row__info">
+          <span class="music-row__title">${escapeHtml(displayTitle(r.title, r.uploader))}</span>
+          <span class="music-row__meta mono">${r.uploader ? escapeHtml(r.uploader) + ' &middot; ' : ''}${fmtTime(r.duration)}</span>
+        </div>
+        <div class="music-row__actions">
+          <button class="btn btn--sm" data-action="download" data-id="${escapeHtml(r.id)}"
+            data-title="${escapeHtml(r.title)}" data-uploader="${escapeHtml(r.uploader || '')}">Download</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    el.innerHTML = '<p class="filelist__empty">Search failed.</p>';
+  }
+}
+
+document.getElementById('search-results').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-action="download"]');
+  if (!btn) return;
+  downloadTrack(btn.dataset.id, btn.dataset.title, btn.dataset.uploader);
+});
+
+async function downloadTrack(id, title, uploader) {
+  // Close the search results right away — the download's progress now
+  // lives in the library list instead.
+  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('search-input').value = '';
+
+  const key = 'dl-' + id + '-' + Date.now();
+  const entry = { key, title, uploader, status: 'downloading', downloaded: 0, total: null, speed: null };
+  pendingDownloads.push(entry);
+  renderLibrary();
+  toast(`Downloading "${title}"...`);
+
+  try {
+    const data = await postJSON('/media/music/api/download', { id });
+    if (data.status === 'error') {
+      failDownload(entry, data.message, title);
+      return;
+    }
+    pollDownload(entry, data.job_id, title);
+  } catch (err) {
+    failDownload(entry, 'Network error', title);
+  }
+}
+
+function failDownload(entry, message, title) {
+  entry.status = 'error';
+  entry.message = message;
+  renderLibrary();
+  toast(`Failed to download "${title}".`, 'error');
+}
+
+function pollDownload(entry, jobId, title) {
+  const tick = async () => {
+    let job;
+    try {
+      const res = await fetch('/media/music/api/download/progress/' + encodeURIComponent(jobId));
+      job = await res.json();
+    } catch (err) {
+      setTimeout(tick, 1000); // transient — keep trying
+      return;
+    }
+    if (job.status === 'error') {
+      failDownload(entry, job.message, title);
+      return;
+    }
+    if (job.status === 'done') {
+      pendingDownloads = pendingDownloads.filter(p => p.key !== entry.key);
+      await loadLibrary(); // pulls the freshly downloaded track in, plus removes the pending row
+      toast(`Added "${title}" to library.`);
+      return;
+    }
+    entry.status = job.status; // 'downloading' | 'processing'
+    entry.downloaded = job.downloaded_bytes;
+    entry.total = job.total_bytes;
+    entry.speed = job.speed;
+    renderLibrary();
+    setTimeout(tick, 700);
+  };
+  tick();
+}
+// --- Playlists ---
+
+let playlistsCache = [];         // [{id, name, count}]
+let openPlaylist = null;         // { id, name, tracks } for whichever manage panel is expanded
+let plAddFilter = '';
+
+async function loadPlaylists() {
+  const res = await fetch('/media/playlists/api/list');
+  const data = await res.json();
+  playlistsCache = data.playlists || [];
+  renderPlaylists();
+}
+
+function renderPlaylists() {
+  const el = document.getElementById('playlist-list');
+  if (!playlistsCache.length) {
+    el.innerHTML = '<p class="filelist__empty">No playlists yet.</p>';
+    return;
+  }
+  el.innerHTML = playlistsCache.map(p => `
+    <div class="music-row playlist-row">
+      <div class="music-row__info">
+        <span class="music-row__title">${escapeHtml(p.name)}</span>
+        <span class="music-row__meta mono">${p.count} track${p.count === 1 ? '' : 's'}</span>
+      </div>
+      <div class="music-row__actions">
+        <button class="btn btn--sm btn--primary" data-action="pl-loop" data-id="${p.id}">&#9654; Loop</button>
+        <button class="btn btn--sm" data-action="pl-shuffle" data-id="${p.id}">&#8635; Shuffle</button>
+        <div class="menu">
+          <button class="btn btn--sm btn--ghost menu__trigger" data-action="pl-menu" aria-haspopup="true" aria-expanded="false" aria-label="More options">&#8942;</button>
+          <div class="menu__panel" role="menu">
+            <button role="menuitem" data-action="pl-manage" data-id="${p.id}">${openPlaylist && openPlaylist.id === p.id ? 'Close manage' : 'Manage songs'}</button>
+            <button role="menuitem" data-action="pl-rename" data-id="${p.id}">Rename</button>
+            <button role="menuitem" class="menu__item--danger" data-action="pl-delete" data-id="${p.id}">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${openPlaylist && openPlaylist.id === p.id ? renderManagePanel() : ''}
+  `).join('');
+}
+
+function renderManagePanel() {
+  const p = openPlaylist;
+  const inPlaylist = new Set(p.tracks.map(t => t.filename));
+  // Search matches everything in the library, not just addable songs —
+  // songs already in the playlist show up too (with a Remove button),
+  // so the same search box works for finding something to pull out.
+  const searchResults = plAddFilter ? fuzzyFilterTracks(plAddFilter, window.library).slice(0, 10) : [];
+
+  const tracksHtml = p.tracks.length
+    ? p.tracks.map(t => `
+        <div class="music-row music-row--sub">
+          <div class="music-row__info">
+            <span class="music-row__title">${escapeHtml(displayTitle(t.title, t.uploader))}</span>
+            <span class="music-row__meta mono">${t.uploader ? escapeHtml(t.uploader) : ''}</span>
+          </div>
+          <div class="music-row__actions">
+            <button class="btn btn--sm btn--danger" data-action="pl-remove" data-id="${p.id}" data-filename="${escapeHtml(t.filename)}">Remove</button>
+          </div>
+        </div>`).join('')
+    : '<p class="filelist__empty">No songs yet — search above to add some.</p>';
+
+  const resultsHtml = searchResults.map(t => {
+    const already = inPlaylist.has(t.filename);
+    return `
+    <div class="music-row music-row--sub">
+      <div class="music-row__info">
+        <span class="music-row__title">${escapeHtml(displayTitle(t.title, t.uploader))}</span>
+        <span class="music-row__meta mono">${t.uploader ? escapeHtml(t.uploader) : ''}</span>
+      </div>
+      <div class="music-row__actions">
+        <button class="btn btn--sm ${already ? 'btn--danger' : 'btn--primary'}"
+          data-action="${already ? 'pl-remove' : 'pl-add'}" data-id="${p.id}" data-filename="${escapeHtml(t.filename)}">
+          ${already ? 'Remove' : 'Add'}</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="playlist-manage">
+      <input type="text" class="pl-search" id="pl-add-input" placeholder="find a song to add or remove..." autocomplete="off" value="${escapeHtml(plAddFilter)}">
+      ${plAddFilter ? `<div class="music-list">${resultsHtml || '<p class="filelist__empty">No matches.</p>'}</div>` : ''}
+      <p class="dim" style="margin:14px 0 4px;">in this playlist</p>
+      <div class="music-list">${tracksHtml}</div>
+    </div>`;
+}
+
+async function newPlaylist() {
+  const name = prompt('Playlist name?');
+  if (!name || !name.trim()) return;
+  const data = await postJSON('/media/playlists/api/create', { name: name.trim() });
+  if (data.status === 'error') { alert(data.message); return; }
+  await loadPlaylists();
+  toast(`Created playlist "${name.trim()}".`);
+}
+
+async function openManagePanel(id) {
+  const res = await fetch('/media/playlists/api/' + encodeURIComponent(id));
+  const data = await res.json();
+  if (data.status === 'error') { alert(data.message); return; }
+  openPlaylist = data;
+  plAddFilter = '';
+  renderPlaylists();
+}
+
+async function refreshOpenPlaylist(id) {
+  // Like openManagePanel, but keeps whatever's typed in the add-search
+  // box so adding several songs in a row doesn't mean retyping a query.
+  const res = await fetch('/media/playlists/api/' + encodeURIComponent(id));
+  const data = await res.json();
+  if (data.status === 'error') { alert(data.message); return; }
+  openPlaylist = data;
+  const cached = playlistsCache.find(p => p.id === id);
+  if (cached) cached.count = data.tracks.length;
+  renderPlaylists();
+  focusAddInput();
+}
+
+function focusAddInput() {
+  const input = document.getElementById('pl-add-input');
+  if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+}
+
+async function playPlaylist(id, mode) {
+  const res = await fetch('/media/playlists/api/' + encodeURIComponent(id));
+  const data = await res.json();
+  if (data.status === 'error') { alert(data.message); return; }
+  if (!data.tracks.length) { alert('This playlist is empty — add some songs first.'); return; }
+  window.playQueue(data.tracks, mode);
+  playingFilename = null; // whole queue, not one library row — clear the single-row highlight
+  renderLibrary();
+  toast(`Playing "${data.name}" (${mode}).`);
+}
+
+document.getElementById('playlist-list').addEventListener('click', async e => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const { action, id, filename } = btn.dataset;
+
+  if (action === 'pl-menu') {
+    const panel = btn.parentElement.querySelector('.menu__panel');
+    const willOpen = !panel.classList.contains('is-open');
+    document.querySelectorAll('.menu__panel.is-open').forEach(p => p.classList.remove('is-open'));
+    panel.classList.toggle('is-open', willOpen);
+    btn.setAttribute('aria-expanded', String(willOpen));
+    return;
+  }
+
+  if (action === 'pl-loop') return playPlaylist(id, 'loop');
+  if (action === 'pl-shuffle') return playPlaylist(id, 'shuffle');
+
+  if (action === 'pl-manage') {
+    if (openPlaylist && openPlaylist.id === id) { openPlaylist = null; renderPlaylists(); }
+    else await openManagePanel(id);
+    return;
+  }
+  if (action === 'pl-rename') {
+    const cur = playlistsCache.find(p => p.id === id);
+    const name = prompt('Rename playlist to?', cur ? cur.name : '');
+    if (!name || !name.trim()) return;
+    const data = await postJSON('/media/playlists/api/' + encodeURIComponent(id) + '/rename', { name: name.trim() });
+    if (data.status === 'error') { alert(data.message); return; }
+    await loadPlaylists();
+    toast(`Renamed to "${name.trim()}".`);
+    return;
+  }
+  if (action === 'pl-delete') {
+    if (!confirm('Delete this playlist? (songs stay in your library)')) return;
+    await fetch('/media/playlists/api/' + encodeURIComponent(id), { method: 'DELETE' });
+    if (openPlaylist && openPlaylist.id === id) openPlaylist = null;
+    await loadPlaylists();
+    toast('Deleted playlist.');
+    return;
+  }
+  if (action === 'pl-add') {
+    const data = await postJSON('/media/playlists/api/' + encodeURIComponent(id) + '/tracks', { filename });
+    if (data.status === 'error') { alert(data.message); return; }
+    await refreshOpenPlaylist(id);
+    toast('Added to playlist.');
+    return;
+  }
+  if (action === 'pl-remove') {
+    await fetch('/media/playlists/api/' + encodeURIComponent(id) + '/tracks/' + encodeURIComponent(filename), { method: 'DELETE' });
+    await refreshOpenPlaylist(id);
+    toast('Removed from playlist.');
+    return;
+  }
+});
+
+// Close any open overflow menu when clicking elsewhere on the page.
+document.addEventListener('click', e => {
+  if (!e.target.closest('.menu')) {
+    document.querySelectorAll('.menu__panel.is-open').forEach(p => p.classList.remove('is-open'));
+  }
+});
+
+document.getElementById('playlist-list').addEventListener('input', e => {
+  if (e.target.id !== 'pl-add-input') return;
+  plAddFilter = e.target.value;
+  renderPlaylists();
+  focusAddInput();
+});
+
+loadPlaylists();
+
+// --- Now-playing bar feedback ---
+// Reads the DOM that the shared music-player.js already updates
+// (title text, toggle icon) rather than hooking into its internals,
+// so a track change or play/pause/stop always gets a visible echo
+// here even though that logic lives in a different script.
+(function watchPlayerBar() {
+  const bar = document.getElementById('music-player');
+  const titleEl = document.getElementById('np-title');
+  const toggleEl = document.getElementById('np-toggle');
+  const stopEl = document.getElementById('np-stop');
+  if (!bar || !titleEl) return;
+
+  let lastTitle = titleEl.textContent;
+  new MutationObserver(() => {
+    if (titleEl.textContent !== lastTitle) {
+      lastTitle = titleEl.textContent;
+      bar.classList.remove('flash');
+      void bar.offsetWidth; // restart the animation
+      bar.classList.add('flash');
+      if (lastTitle === 'Nothing playing') { playingFilename = null; renderLibrary(); }
+    }
+  }).observe(titleEl, { childList: true, characterData: true, subtree: true });
+
+  if (toggleEl) toggleEl.addEventListener('click', () => {
+    toast(toggleEl.textContent.trim() === '\u25B6' ? 'Paused.' : 'Playing.');
+  });
+  if (stopEl) stopEl.addEventListener('click', () => {
+    playingFilename = null;
+    renderLibrary();
+    toast('Stopped.');
+  });
+})();
+
+</script>
+</main>
+{% endblock %}

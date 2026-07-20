@@ -1,6 +1,21 @@
 /* ============================================================
    GENERIC PAGE SHELL
    ============================================================ */
+
+/* shared "back" affordance — used on auth pages and any tool
+   subpage that needs a way back to its parent list */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  color: var(--text-faint);
+  margin-bottom: 20px;
+  transition: color 0.15s ease;
+}
+.back-link:hover, .back-link:focus-visible { color: var(--accent); }
+
 .page-shell {
   max-width: 760px;
   margin: 0 auto;
@@ -57,6 +72,14 @@
   color: var(--text);
   font-size: var(--fs-base);
 }
+#library-sort {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 10px;
+  color: var(--text);
+  font-size: var(--fs-base);
+}
 .page-shell textarea {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -73,6 +96,38 @@
   text-transform: uppercase;
   color: var(--text-faint);
   margin: 24px 0 12px;
+}
+
+/* ---- file list (files.html) ---- */
+.filelist {
+  display: grid;
+  gap: 6px;
+}
+.filelist__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  background: var(--panel);
+}
+.filelist__name {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.filelist__empty {
+  color: var(--text-faint);
+  font-size: var(--fs-base);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  text-align: center;
 }
 
 /* Wider variant for shells that host the sysgrid dashboard widget

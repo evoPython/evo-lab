@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "app_base.html" %}
 
 {% block title %}Open URL{% endblock %}
 
@@ -15,12 +15,12 @@
   <p>Opened: {{ result }}</p>
   {% endif %}
 
-  <form method="post">
-    <input type="text" name="url" placeholder="https://example.com" size="50">
-    <button type="submit" class="btn">Open</button>
+  <form method="post" class="form-row">
+    <input type="text" name="url" placeholder="https://example.com" style="flex: 1; min-width: 0;">
+    <button type="submit" class="btn btn--primary">Open</button>
   </form>
 
-  <p><a href="/tools">Back to tools</a></p>
+  <a class="back-link mono" href="/tools">&larr; back to tools</a>
 </div>
 </main>
 {% endblock %}

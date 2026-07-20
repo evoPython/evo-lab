@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PisayConnect{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script>
+    (function () {
+        const stored = localStorage.getItem("theme");
+        const dark = stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+    })();
+    </script>
+    {% block head %}{% endblock %}
+</head>
+<body class="{% if debug_mode %}debug-open{% endif %}{% if is_student %} has-sidebar{% endif %}"
+      data-view="{{ view | default('login') }}"
+      data-search-scope="{% block search_scope %}all{% endblock %}">
+
+{% if is_student %}
+<div class="app-shell">
+    <div class="sidebar-backdrop" hidden aria-hidden="true"></div>
+    <aside class="app-sidebar" id="app-sidebar" aria-label="Main navigation">
+        <div class="sidebar-brand">
+            <a href="/app/dashboard" class="sidebar-brand-link" data-spa-link>
+                <span class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                </span>
+                PisayConnect
+            </a>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="sidebar-nav-group">
+                <span class="sidebar-nav-label">Feed</span>
+                <a href="/app/dashboard"
+                   class="sidebar-nav-link{% if view == 'dashboard' %} active{% endif %}"
+                   data-spa-link>
+                    <span class="sidebar-nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                    </span>
+                    Dashboard
+                </a>
+                <a href="/app/bulletin-board"
+                   class="sidebar-nav-link{% if view == 'bulletin_board' %} active{% endif %}"
+                   data-spa-link>
+                    <span class="sidebar-nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+                    </span>
+                    Bulletin Board
+                </a>
+                <a href="/app/classwall"
+                   class="sidebar-nav-link{% if view == 'classwall' %} active{% endif %}"
+                   data-spa-link>
+                    <span class="sidebar-nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    </span>
+                    Class Wall
+                </a>
+                <a href="/app/bookmarks"
+                   class="sidebar-nav-link{% if view == 'bookmarks' %} active{% endif %}"
+                   data-spa-link>
+                    <span class="sidebar-nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    </span>
+                    Bookmarks
+                </a>
+            </div>
+
+            <div class="sidebar-nav-group">
+                <span class="sidebar-nav-label">Student</span>
+                <a href="/app/assessments"
+                   class="sidebar-nav-link{% if view == 'assessments' %} active{% endif %}"
+                   data-spa-link>
+                    <span class="sidebar-nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+                    </span>
+                    Assessments
+                </a>
+                <a href="/app/leave-passes"
+                   class="sidebar-nav-link{% if view == 'leave_passes' or view == 'parent_add' %} active{% endif %}"
+                   data-spa-link>
+                    <span class="sidebar-nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 11v2"/><path d="M13 17v2"/></svg>
+                    </span>
+                    Leave Passes
+                </a>
+            </div>
+
+            <div class="sidebar-nav-group">
+                <span class="sidebar-nav-label">Account</span>
+                <a href="/app/parent/add"
+                   class="sidebar-nav-link{% if view == 'parent_add' %} active{% endif %}"
+                   data-spa-link>
+                    <span class="sidebar-nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </span>
+                    Link parent
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="/dashboard" class="back-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Back to evo-lab
+            </a>
+            <details class="user-menu sidebar-user-menu{% if debug_mode %} is-debug{% endif %}">
+                <summary class="user-menu-trigger">
+                    <span class="user-menu-avatar" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </span>
+                    <span class="user-menu-name">{{ username }}</span>
+                    {% if debug_mode %}
+                    <span class="debug-pill debug-pill-inline">Debug</span>
+                    {% endif %}
+                </summary>
+                <div class="user-menu-panel">
+                    <button type="button" class="user-menu-item user-menu-button user-menu-theme theme-toggle" aria-label="Toggle theme">
+                        <span class="theme-toggle-label">Dark mode</span>
+                    </button>
+                    <form method="POST" action="{{ url_for('toggle_debug') }}" class="user-menu-form">
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="user-menu-item user-menu-button">
+                            {% if debug_mode %}Disable debug{% else %}Enable debug{% endif %}
+                        </button>
+                    </form>
+                    <a href="{{ url_for('logout') }}" class="user-menu-item user-menu-button user-menu-danger">
+                        Logout
+                    </a>
+                </div>
+            </details>
+        </div>
+    </aside>
+
+    <div class="app-main">
+        <header class="app-topbar" aria-label="App navigation">
+            <button type="button"
+                    class="sidebar-toggle"
+                    aria-controls="app-sidebar"
+                    aria-expanded="false"
+                    aria-label="Open menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            </button>
+            <a href="/app/dashboard" class="app-topbar-brand" data-spa-link>
+                <span class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                </span>
+                PisayConnect
+            </a>
+        </header>
+        {% block header_extra %}{% endblock %}
+
+        <main class="page{% if debug_mode %} page-with-debug{% endif %}">
+{% else %}
+<header class="login-topbar">
+    <button type="button" id="theme-toggle" class="btn btn-ghost btn-icon theme-toggle" aria-label="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+</header>
+<main class="page page-login">
+{% endif %}
+
+            {% for category, message in flashed_messages %}
+            <div class="alert alert-{{ 'error' if category == 'error' else 'success' }}">{{ message }}</div>
+            {% endfor %}
+
+            {% if error %}
+            <div class="alert alert-error">{{ error }}</div>
+            {% endif %}
+
+            {% if success %}
+            <div class="alert alert-success">{{ success }}</div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+
+{% if is_student %}
+        </main>
+    </div>
+</div>
+{% else %}
+</main>
+{% endif %}
+
+{% if is_student and debug_mode %}
+<section class="debug-panel" id="debug-panel" aria-label="API debug console">
+    <div class="debug-panel-toolbar">
+        <div class="debug-panel-title">
+            <span class="debug-dot"></span>
+            PisayConnect requests
+            <span class="debug-count">{{ debug_logs|length }}</span>
+        </div>
+        <div class="debug-panel-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="debug-expand-all">Expand all</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="debug-collapse-all">Collapse</button>
+            <form method="POST" action="{{ url_for('clear_debug') }}" class="inline-form">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="btn btn-ghost btn-sm">Clear</button>
+            </form>
+            <button type="button" class="btn btn-ghost btn-sm" id="debug-panel-toggle" aria-expanded="true">Hide</button>
+        </div>
+    </div>
+    <div class="debug-panel-body" id="debug-panel-body">
+        {% if debug_logs %}
+        <div class="debug-log-list">
+            {% for entry in debug_logs|reverse %}
+            <details class="debug-entry" data-entry-id="{{ entry.id }}">
+                <summary class="debug-entry-summary">
+                    <span class="debug-method{% if entry.method == 'DEBUG' %} debug-method-event{% endif %}">{{ entry.method }}</span>
+                    <span class="debug-label">{{ entry.label }}</span>
+                    {% if entry.response_status %}
+                    <span class="debug-status status-{{ entry.response_status // 100 }}xx">{{ entry.response_status }}</span>
+                    {% elif entry.error %}
+                    <span class="debug-status status-error">ERR</span>
+                    {% endif %}
+                    {% if entry.duration_ms is not none %}
+                    <span class="debug-duration">{{ entry.duration_ms }}ms</span>
+                    {% endif %}
+                </summary>
+                <div class="debug-entry-body">
+                    <div class="debug-section">
+                        <h4>Request</h4>
+                        <pre class="debug-code">{{ entry.url }}</pre>
+                        {% if entry.params %}
+                        <p class="debug-meta-label">Query params</p>
+                        <pre class="debug-code">{{ entry.params | tojson(indent=2) }}</pre>
+                        {% endif %}
+                        {% if entry.request_body %}
+                        <p class="debug-meta-label">Body</p>
+                        <pre class="debug-code">{{ entry.request_body | tojson(indent=2) }}</pre>
+                        {% endif %}
+                        <p class="debug-meta-label">Headers</p>
+                        <pre class="debug-code">{{ entry.request_headers | tojson(indent=2) }}</pre>
+                    </div>
+                    <div class="debug-section">
+                        <h4>Response</h4>
+                        {% if entry.error %}
+                        <p class="debug-error">{{ entry.error }}</p>
+                        {% endif %}
+                        {% if entry.response_headers %}
+                        <p class="debug-meta-label">Headers</p>
+                        <pre class="debug-code">{{ entry.response_headers | tojson(indent=2) }}</pre>
+                        {% endif %}
+                        {% if entry.response_body is not none %}
+                        <p class="debug-meta-label">Body</p>
+                        <pre class="debug-code">{% if entry.response_body is mapping or entry.response_body is sequence %}{{ entry.response_body | tojson(indent=2) }}{% else %}{{ entry.response_body }}{% endif %}</pre>
+                        {% endif %}
+                    </div>
+                </div>
+            </details>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="debug-empty">No requests logged yet this session.</p>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+{% block overlays %}{% endblock %}
+
+{% if is_student %}
+<script src="{{ url_for('static', filename='js/debug.js') }}"></script>
+{% endif %}
+<script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

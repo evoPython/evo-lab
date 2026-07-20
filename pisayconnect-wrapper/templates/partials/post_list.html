@@ -1,0 +1,66 @@
+{% for item in data %}
+<article class="post-card" data-post-id="{{ item.id }}">
+    <div class="post-header">
+        <div class="post-meta">
+            <p class="post-teacher">{{ item.teacher | safe }}</p>
+            <div class="post-date">{{ item.date | safe }}</div>
+        </div>
+        <button type="button"
+                class="btn btn-bookmark{% if bookmark_ids_by_source and item.id in bookmark_ids_by_source.get('classwall', []) %} bookmarked{% endif %}"
+                data-post-id="{{ item.id }}"
+                data-bookmark-source="classwall"
+                aria-pressed="{{ 'true' if bookmark_ids_by_source and item.id in bookmark_ids_by_source.get('classwall', []) else 'false' }}"
+                onclick="toggleBookmark(this)">
+            <svg class="btn-bookmark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span class="btn-bookmark-label">{% if bookmark_ids_by_source and item.id in bookmark_ids_by_source.get('classwall', []) %}Bookmarked{% else %}Bookmark{% endif %}</span>
+        </button>
+    </div>
+
+    {% if item.images %}
+    <div class="message-image-grid">
+        {% for img in item.images %}
+        <button type="button"
+                class="message-image-thumb"
+                data-lightbox-src="{{ img.src }}"
+                data-lightbox-alt="{{ img.alt }}"
+                aria-label="View image: {{ img.alt }}">
+            <img src="{{ img.src }}" alt="{{ img.alt }}" loading="lazy">
+        </button>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="post-collapsible-content">
+        {% if item.message %}
+        <div class="post-message">{{ item.message | safe }}</div>
+        {% endif %}
+
+        {% if item.attachments %}
+        <div class="attachments">
+            <div class="attachments-title">Attachments ({{ item.attachments|length }})</div>
+            <ul class="attachment-list">
+                {% for file in item.attachments %}
+                <li class="attachment-item">
+                    <a href="{{ url_for('download', file_id=file.id) }}">{{ file.name | safe }}</a>
+                    {% if file.type %}<small>{{ file.type }}</small>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if item.attachments %}
+        <div class="post-actions">
+            <a href="#" class="download-all" onclick="downloadAll(this); return false;"
+               data-files='{{ item.attachments | tojson }}'>Download all</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <button type="button" class="post-toggle btn btn-ghost" hidden aria-expanded="false">
+        See more
+    </button>
+</article>
+{% endfor %}

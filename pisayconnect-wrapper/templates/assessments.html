@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Assessments · PisayConnect{% endblock %}
+
+{% block content %}
+<div class="card cache-managed"{% if cache_refresh_url %} data-cache-refresh="{{ cache_refresh_url }}"{% endif %}>
+    <div class="card-header-row">
+        <div>
+            <h2 class="card-title">Assessments</h2>
+            <p class="card-subtitle">Your enrolled subjects and assessment progress for the current school year.</p>
+        </div>
+    </div>
+
+    {% if data is not none %}
+    <div id="assessment-class-list" class="assessment-class-list">
+        {% if data %}
+        {% include "partials/assessment_class_list.html" %}
+        {% else %}
+        <div class="empty-state">
+            <p>No enrolled subjects found.</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

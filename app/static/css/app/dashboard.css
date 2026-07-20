@@ -1,0 +1,216 @@
+/* ============================================================
+   DASHBOARD — private stats view
+   ============================================================ */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.stat-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-card__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.stat-card__value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--text);
+}
+.stat-card__sub {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+/* wider variant for cards that hold longer strings (interface
+   lists, uptime) so they don't get squeezed into the same
+   narrow column as a percentage */
+.stat-card--wide {
+  grid-column: span 2;
+}
+@media (max-width: 420px) {
+  .stat-card--wide { grid-column: 1 / -1; }
+}
+
+/* colour hooks for values that cross a threshold — same warn/danger
+   language used elsewhere in the app (rc-win-box, tool-card__status) */
+.stat-card__value.is-warn { color: var(--warn); }
+.stat-card__value.is-danger { color: var(--danger); }
+
+/* ---- progress bars, same thin-pill look as the home sysgrid ---- */
+.stat-card__bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  display: block;
+  margin: 2px 0 1px;
+}
+.stat-card__bar-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--accent-dim);
+  border-radius: 999px;
+  transition: width 0.6s ease, background 0.3s ease;
+}
+.stat-card__bar-fill.is-warn { background: var(--warn); }
+.stat-card__bar-fill.is-danger { background: var(--danger); }
+.stat-card__bar-fill.is-ok { background: var(--ok); }
+
+/* faded average-of-last-5 sublabel next to CPU/RAM's live percent */
+.stat-card__avg {
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+/* network chip: friendly interface names only (no IPs inline —
+   those live in the title tooltip), truncated with an ellipsis so
+   a long interface list can't blow out the card's width */
+.stat-card--network .stat-card__value--truncate {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* uptime: monospace, padded segments read better than a bare string */
+.stat-card__value--uptime {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+/* battery sits in its own grid directly above the history chart it
+   belongs with, instead of buried in the general stat grid */
+.stat-grid--battery {
+  grid-template-columns: 1fr;
+  margin-top: 10px;
+}
+.stat-card--battery {
+  grid-column: auto;
+}
+.stat-card__sub-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ---- battery history chart panel ---- */
+.chart-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 14px 16px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chart-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.chart-panel__title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.chart-range {
+  display: flex;
+  gap: 4px;
+}
+.chart-range__opt {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+  padding: 5px 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.chart-range__opt:hover, .chart-range__opt:focus-visible {
+  color: var(--text-dim);
+  border-color: var(--border-strong);
+}
+.chart-range__opt.is-active {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+  background: var(--accent-soft);
+}
+
+.chart-panel__graph {
+  height: 120px;
+  position: relative;
+  cursor: crosshair;
+}
+
+.chart-tooltip {
+  display: none;
+  position: absolute;
+  transform: translateX(-50%);
+  top: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+.chart-tooltip--right { transform: translateX(-90%); }
+.dashboard-chart { display: block; width: 100%; height: 100%; overflow: visible; }
+.dashboard-chart__area { fill: var(--accent-soft-2); stroke: none; }
+.dashboard-chart__line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.dashboard-chart__midline {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  vector-effect: non-scaling-stroke;
+}
+.dashboard-chart__dot { fill: var(--accent); }
+.dashboard-chart__charge-dot { fill: var(--ok); }
+.chart-panel__empty {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+
+.chart-panel__ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--text-faint);
+}

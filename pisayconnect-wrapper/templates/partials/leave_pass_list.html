@@ -1,0 +1,108 @@
+{% for item in data %}
+<article class="leave-pass-card{% if item.pending_return_signature %} leave-pass-pending{% endif %}" data-pass-id="{{ item.id }}">
+    <div class="leave-pass-header">
+        <div class="leave-pass-student">
+            <h3 class="leave-pass-name">{{ item.student_name or "Student" }}</h3>
+            {% if item.student_no %}
+            <span class="leave-pass-no">{{ item.student_no }}</span>
+            {% endif %}
+        </div>
+        {% if item.status %}
+        <span class="status-badge status-{{ item.status_key }}"{% if item.status != item.status_short %} title="{{ item.status }}"{% endif %}>
+            <span class="status-label-full">{{ item.status }}</span>
+            <span class="status-label-short">{{ item.status_short or item.status }}</span>
+        </span>
+        {% endif %}
+    </div>
+
+    <dl class="leave-pass-details">
+        {% if item.date_created_display %}
+        <div class="detail-row">
+            <dt>Requested</dt>
+            <dd>{{ item.date_created_display }}</dd>
+        </div>
+        {% endif %}
+
+        {% if item.date_from_display or item.date_to_display %}
+        <div class="detail-row">
+            <dt>Going home</dt>
+            <dd>
+                {% if item.date_from_display and item.date_to_display %}
+                    {{ item.date_from_display }} → {{ item.date_to_display }}
+                {% elif item.date_from_display %}
+                    {{ item.date_from_display }}
+                {% elif item.date_to_display %}
+                    Until {{ item.date_to_display }}
+                {% endif %}
+            </dd>
+        </div>
+        {% endif %}
+
+        {% if item.departure_display %}
+        <div class="detail-row">
+            <dt>Departed campus</dt>
+            <dd>{{ item.departure_display }}</dd>
+        </div>
+        {% endif %}
+
+        {% if item.arrival_display %}
+        <div class="detail-row">
+            <dt>Arrived home</dt>
+            <dd>{{ item.arrival_display }}</dd>
+        </div>
+        {% endif %}
+
+        {% if item.departure_from_home_display %}
+        <div class="detail-row">
+            <dt>Departed home</dt>
+            <dd>{{ item.departure_from_home_display }}</dd>
+        </div>
+        {% elif item.pending_return_signature and mode == 'parent' %}
+        <div class="detail-row">
+            <dt>Departed home</dt>
+            <dd class="detail-pending">Not signed yet</dd>
+        </div>
+        {% endif %}
+
+        {% if item.destination %}
+        <div class="detail-row">
+            <dt>Destination</dt>
+            <dd>{{ item.destination }}</dd>
+        </div>
+        {% endif %}
+
+        {% if item.reason %}
+        <div class="detail-row detail-row-full">
+            <dt>Reason</dt>
+            <dd>{{ item.reason }}</dd>
+        </div>
+        {% endif %}
+
+        {% if item.residence_head_approval %}
+        <div class="detail-row">
+            <dt>Residence approval</dt>
+            <dd>{{ item.residence_head_approval }}</dd>
+        </div>
+        {% endif %}
+
+        {% if item.approved_by %}
+        <div class="detail-row">
+            <dt>Approved by</dt>
+            <dd>{{ item.approved_by }}</dd>
+        </div>
+        {% endif %}
+    </dl>
+
+    <footer class="leave-pass-footer">
+        <span class="leave-pass-id">Pass #{{ item.id }}</span>
+        {% if mode == 'parent' and item.pending_return_signature %}
+        <button type="button"
+                class="btn btn-primary btn-sm approve-return-btn"
+                data-pass-id="{{ item.id }}"
+                data-student-name="{{ item.student_name | e }}">
+            Approve Return
+        </button>
+        {% endif %}
+    </footer>
+</article>
+{% endfor %}

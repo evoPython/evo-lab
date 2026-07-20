@@ -1,0 +1,30 @@
+{% if parent_accounts %}
+<section class="parent-panel">
+    <div class="parent-panel-header">
+        <h3 class="card-title-sm">Parent accounts</h3>
+        <span class="parent-panel-hint">Parent view uses this account's token</span>
+    </div>
+
+    <div class="parent-chip-row">
+        {% for account in parent_accounts %}
+        <a href="{{ url_for('leave_passes', mode='parent', parent=account.id) }}"
+           class="parent-chip{% if active_parent and active_parent.id == account.id %} active{% endif %}">
+            <span class="parent-chip-id">{{ account.parent_username }}</span>
+            {% if active_parent and active_parent.id == account.id %}
+            <span class="parent-chip-badge">Active</span>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if active_parent %}
+    <div class="parent-panel-footer">
+        <span class="parent-panel-active">Viewing as parent <strong>{{ active_parent.parent_username }}</strong></span>
+        <form method="POST" action="{{ url_for('remove_parent', parent_id=active_parent.id) }}" class="inline-form">
+            <input type="hidden" name="next" value="{{ url_for('leave_passes') }}">
+            <button type="submit" class="btn btn-ghost btn-sm">Unlink</button>
+        </form>
+    </div>
+    {% endif %}
+</section>
+{% endif %}

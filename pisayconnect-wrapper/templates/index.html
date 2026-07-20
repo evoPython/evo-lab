@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block search_scope %}{% if view == 'bookmarks' %}bookmarks{% else %}all{% endif %}{% endblock %}
+
+{% block header_extra %}
+{% if is_student and view in ('classwall', 'bookmarks') %}
+<div class="search-row">
+    <div class="search-bar">
+        <input type="search"
+               id="post-search"
+               class="search-input"
+               placeholder="Search posts… fuzzy words, or /regex/ and re:pattern"
+               autocomplete="off"
+               spellcheck="false">
+    </div>
+    <div id="search-status" class="search-status" hidden aria-live="polite"></div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if not is_student %}
+    <div class="card">
+        <h2 class="card-title">Student sign in</h2>
+        <p class="card-subtitle">Log in with your student PisayConnect account. Parent accounts can be linked after sign-in.</p>
+        <form class="login-form" method="POST" action="{{ url_for('login') }}">
+            <div class="form-field">
+                <label for="username">Username</label>
+                <input id="username" name="username" placeholder="Username" required autocomplete="username">
+            </div>
+            <div class="form-field">
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" placeholder="Password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+    </div>
+{% elif data is not none %}
+    <div class="card cache-managed"{% if cache_refresh_url %} data-cache-refresh="{{ cache_refresh_url }}"{% endif %}>
+        <div class="card-header-row">
+            <h2 class="card-title">
+                {% if view == 'bookmarks' %}Bookmarks{% elif view == 'classwall' %}Class Wall{% else %}Dashboard{% endif %}
+            </h2>
+            <div class="sync-status" aria-live="polite" data-state="idle">
+                <span class="sync-status-indicator" aria-hidden="true"></span>
+                <span class="sync-status-text">Up to date</span>
+            </div>
+        </div>
+
+        {% if view == 'classwall' %}
+        {% set prev_url = url_for('classwall', page=page - 1) if page > 1 else none %}
+        {% set next_url = url_for('classwall', page=page + 1) if has_next else none %}
+        {% with page=page, prev_url=prev_url, next_url=next_url, pagination_id='pagination' %}
+        {% include "partials/pagination.html" %}
+        {% endwith %}
+        {% endif %}
+
+        {% if data %}
+        <div class="post-list" id="post-list">
+            {% include "partials/post_list.html" %}
+        </div>
+        {% else %}
+        <div id="post-list">
+            {% include "partials/empty_posts.html" %}
+        </div>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block overlays %}
+<div id="lightbox" class="lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Image preview">
+    <div class="lightbox-backdrop"></div>
+    <div class="lightbox-panel">
+        <button type="button" class="lightbox-nav lightbox-prev" aria-label="Previous image" hidden>&#8249;</button>
+        <button type="button" class="lightbox-nav lightbox-next" aria-label="Next image" hidden>&#8250;</button>
+        <div class="lightbox-body">
+            <div class="lightbox-spinner" aria-hidden="true"></div>
+            <img class="lightbox-image" src="" alt="">
+        </div>
+        <div class="lightbox-footer">
+            <span class="lightbox-caption"></span>
+            <span class="lightbox-counter" hidden></span>
+            <a href="#" class="btn btn-primary lightbox-download" download>Download</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/posts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/search.js') }}"></script>
+<script src="{{ url_for('static', filename='js/cache_refresh.js') }}"></script>
+<script src="{{ url_for('static', filename='js/bookmarks.js') }}"></script>
+{% endblock %}

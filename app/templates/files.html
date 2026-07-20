@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "app_base.html" %}
 
 {% block title %}File Transfer{% endblock %}
 
@@ -11,22 +11,27 @@
   <p class="error">{{ error }}</p>
   {% endif %}
 
-  <form method="post" enctype="multipart/form-data">
+  <form method="post" enctype="multipart/form-data" class="form-row">
     <input type="file" name="file">
-    <button type="submit" class="btn">Upload</button>
+    <button type="submit" class="btn btn--primary">Upload</button>
   </form>
 
   <h2 class="h2">Files on laptop</h2>
 
-  <ul>
+  {% if files %}
+  <div class="filelist">
   {% for f in files %}
-  <li>{{ f }} — <a href="/tools/files/download/{{ f }}">Download</a></li>
-  {% else %}
-  <li>No files uploaded yet.</li>
+    <div class="filelist__row">
+      <span class="filelist__name">{{ f }}</span>
+      <a class="btn btn--sm" href="/tools/files/download/{{ f }}">Download</a>
+    </div>
   {% endfor %}
-  </ul>
+  </div>
+  {% else %}
+  <p class="filelist__empty">No files uploaded yet.</p>
+  {% endif %}
 
-  <p><a href="/tools">Back to tools</a></p>
+  <a class="back-link mono" href="/tools" style="margin-top: 20px; display: inline-flex;">&larr; back to tools</a>
 </div>
 </main>
 {% endblock %}

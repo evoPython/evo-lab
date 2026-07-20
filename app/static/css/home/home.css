@@ -4,7 +4,9 @@
    crust/etc, distinct from the site-wide --accent/--bg vars) never
    leaks onto the other app pages that share this stylesheet.
    ============================================================ */
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&display=swap");
+/* Fraunces is now loaded via the <link> in base.html's <head>,
+   alongside the site's other Google Fonts — see the note in
+   style.css for why this used to be a separate @import here. */
 
 #homeApp {
   --rh-crust: #0b0c0f;
@@ -31,17 +33,42 @@
   --rh-content-w: 620px;
   --rh-shadow-card: 0 3px 7px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
 
+  /* ---- dot-grid parallax ----
+     Consumed by .rh-grid-dots' transform, below (compositor-only —
+     no repaint on update, unlike animating background-position
+     directly, which is what this used to do and was the main source
+     of lag during navigation/scrolling). Also fed to .rh-grid-glow's
+     transform (both axes), so the glow's dot-shaped mask "windows"
+     stay pixel-locked to the real dots — same compositor-only
+     mechanism as the dots layer itself, so the two never drift out
+     of sync frame-to-frame. Both are driven from script.js. */
+  --rh-grid-parallax-x: 0px;
+  --rh-grid-parallax-y: 0px;
+
   position: fixed;
   inset: 0;
   overflow: hidden;
   overscroll-behavior: none;
   background:
     radial-gradient(ellipse at center, transparent 28%, rgba(0, 0, 0, 0.5) 100%),
-    radial-gradient(circle at 1px 1px, rgba(169, 171, 179, 0.09) 1px, transparent 0) 0 0 / 28px 28px,
     var(--rh-crust);
   color: var(--rh-text);
   font-size: 16px;
   line-height: 1.7;
+}
+/* the actual dot grid — its own layer so its parallax can move via
+   transform (GPU compositing only) instead of background-position
+   (forces a full repaint of the layer on every single update). The
+   inset buffer is wider than the max parallax range on each axis so
+   translating it never reveals its own edge. */
+#homeApp .rh-grid-dots {
+  position: fixed;
+  inset: -60px -170px;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 1px 1px, rgba(169, 171, 179, 0.09) 1px, transparent 0) 0 0 / 28px 28px;
+  transform: translate(var(--rh-grid-parallax-x), var(--rh-grid-parallax-y));
+  will-change: transform;
 }
 #homeApp *, #homeApp *::before, #homeApp *::after { box-sizing: border-box; }
 #homeApp a { color: inherit; text-decoration: none; }
@@ -125,16 +152,56 @@
    — i.e. "normal" — at the edge), so overlapping blobs just add
    brightness where they cross rather than reading as hard shapes. */
 #homeApp .rh-grid-glow {
-  position: fixed; inset: 0; z-index: 0;
+  position: fixed;
+  /* same box as .rh-grid-dots (not inset:0) — this is the actual fix
+     for the misalignment: mask-position/background-position "0 0" is
+     relative to each element's OWN box, so a differently-sized box
+     puts the pattern's phase in a different place even with identical
+     tile size. Matching the box exactly guarantees the mask's dot
+     "windows" start on the exact same pixels as the real dots. */
+  inset: -60px -170px;
+  z-index: 0;
   overflow: hidden; pointer-events: none;
   mix-blend-mode: screen;
   opacity: 0.85;
+  /* isolation + a promoted layer keep the blend-mode compositing
+     scoped to this element's own subtree, so the constantly-animating
+     blobs inside it don't force the browser to re-blend/repaint
+     everything else on the page every frame. */
+  isolation: isolate;
+  contain: layout style paint;
   -webkit-mask-image: radial-gradient(circle at 1px 1px, #fff 1px, transparent 0);
   mask-image: radial-gradient(circle at 1px 1px, #fff 1px, transparent 0);
   -webkit-mask-size: 28px 28px;
   mask-size: 28px 28px;
   -webkit-mask-repeat: repeat;
   mask-repeat: repeat;
+  /* static — no longer tracks parallax via mask-position. Moving a
+     mask by animating its position forces a repaint every frame, and
+     because that repaint runs on a different timeline than the dots'
+     compositor-only transform, the two layers could visibly drift
+     apart frame-to-frame (the "shaking" — this layer lagging or
+     leading the real dots instead of moving as one). Driving this
+     layer with `transform` below instead keeps both layers on the
+     exact same compositor-only path, so they move in lockstep with
+     no relative jitter. */
+  -webkit-mask-position: 0 0;
+  mask-position: 0 0;
+  transform: translate(var(--rh-grid-parallax-x), var(--rh-grid-parallax-y));
+  will-change: transform;
+}
+/* the ambient blobs live in their own layer so they can be counter-
+   translated against the parallax transform above — the mask needs
+   to move with the dots, but the blobs themselves were never meant
+   to drift with it, just glow through whichever dots the mask
+   currently exposes. Cancelling the parent's transform here keeps
+   the blobs (and the cursor-follow blob, appended into this same
+   layer by script.js) anchored to their real viewport position. */
+#homeApp .rh-grid-glow__blobs {
+  position: absolute;
+  inset: 60px 170px;
+  transform: translate(calc(-1 * var(--rh-grid-parallax-x)), calc(-1 * var(--rh-grid-parallax-y)));
+  will-change: transform;
 }
 #homeApp .rh-blob {
   position: absolute;
@@ -182,9 +249,10 @@
    so its brightened dots still land exactly on the visible grid. ---- */
 @media (max-width: 720px) {
   #homeApp {
-    background:
-      radial-gradient(circle at 0.6px 0.6px, rgba(169, 171, 179, 0.11) 0.6px, transparent 0) 0 0 / 15px 15px,
-      var(--rh-crust);
+    background: var(--rh-crust);
+  }
+  #homeApp .rh-grid-dots {
+    background: radial-gradient(circle at 0.6px 0.6px, rgba(169, 171, 179, 0.11) 0.6px, transparent 0) 0 0 / 15px 15px;
   }
   #homeApp .rh-grid-glow {
     -webkit-mask-image: radial-gradient(circle at 0.6px 0.6px, #fff 0.6px, transparent 0);
@@ -403,6 +471,28 @@
 #homeApp .rh-intro__btn:hover { transform: translateY(-2px); background: #b7acff; }
 #homeApp .rh-intro__btn .arrow { transition: transform var(--rh-dur-fast) var(--rh-ease); }
 #homeApp .rh-intro__btn:hover .arrow { transform: translateX(3px); }
+/* mobile-only heads-up — this is a desktop-first, mouse/keyboard-heavy
+   experience (drag physics, hover states, etc.), so first-time mobile
+   visitors get a small, low-key warning rather than none at all. */
+#homeApp .rh-intro__mobile-note {
+  display: none;
+  margin: 14px auto 0;
+  font-size: 11px;
+  color: var(--rh-overlay1);
+  opacity: 0;
+  animation: rh-introUp .7s var(--rh-ease) .5s forwards;
+}
+/* two independent triggers, either one is enough: a narrow (portrait
+   phone) viewport, OR a touch/coarse-pointer input with no hover —
+   the latter is what actually catches a phone turned sideways, since
+   landscape width alone can easily clear 720px (a Pro Max is ~930px
+   landscape) and would otherwise slip past the width check alone. */
+@media (max-width: 720px) {
+  #homeApp .rh-intro__mobile-note { display: block; }
+}
+@media (pointer: coarse) and (hover: none) {
+  #homeApp .rh-intro__mobile-note { display: block; }
+}
 @keyframes rh-introUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 #homeApp .rh-intro.rh-intro--leaving { opacity: 0; filter: blur(6px); pointer-events: none; }
 

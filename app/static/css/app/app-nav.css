@@ -72,7 +72,3 @@
   .topnav__item { font-size: var(--fs-base); padding: 6px 10px; }
   .topnav__right { padding-left: 14px; margin-left: 8px; }
 }
-
-@media (max-width: 480px) {
-  .btn { padding: 10px 16px; }
-}

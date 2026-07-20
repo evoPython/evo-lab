@@ -7,19 +7,137 @@
 {% if personal %}
 <div class="page-shell">
   <h1 class="mono">dashboard</h1>
-  <p>Private dashboard enabled.</p>
+  <p class="dim">Private dashboard enabled.</p>
 
-  <div id="stats">
-    <p>CPU: <span id="cpu-percent">-</span>% (<span id="cpu-cores">-</span> cores, <span id="cpu-temp">-</span>)</p>
-    <p>RAM: <span id="ram-percent">-</span>% (<span id="ram-used">-</span> / <span id="ram-total">-</span> GB)</p>
-    <p>Battery: <span id="battery">-</span></p>
-    <p>Disk: <span id="disk-percent">-</span>% (<span id="disk-used">-</span> / <span id="disk-total">-</span> GB)</p>
-    <p>Network: <span id="network">-</span></p>
-    <p>Data sent/received: <span id="net-io">-</span></p>
-    <p>Uptime: <span id="uptime">-</span></p>
+  <div class="stat-grid" id="stats">
+    <div class="stat-card">
+      <span class="stat-card__label">CPU</span>
+      <span class="stat-card__value"><span id="cpu-percent">-</span>%<span class="stat-card__avg" id="cpu-avg"></span></span>
+      <span class="stat-card__bar"><span class="stat-card__bar-fill" id="cpu-bar"></span></span>
+      <span class="stat-card__sub"><span id="cpu-cores">-</span> cores · <span id="cpu-temp">-</span></span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">RAM</span>
+      <span class="stat-card__value"><span id="ram-percent">-</span>%<span class="stat-card__avg" id="ram-avg"></span></span>
+      <span class="stat-card__bar"><span class="stat-card__bar-fill" id="ram-bar"></span></span>
+      <span class="stat-card__sub"><span id="ram-used">-</span> / <span id="ram-total">-</span> GB</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">Disk</span>
+      <span class="stat-card__value"><span id="disk-percent">-</span>%</span>
+      <span class="stat-card__bar"><span class="stat-card__bar-fill" id="disk-bar"></span></span>
+      <span class="stat-card__sub"><span id="disk-used">-</span> / <span id="disk-total">-</span> GB</span>
+    </div>
+    <div class="stat-card stat-card--network">
+      <span class="stat-card__label">Network</span>
+      <span class="stat-card__value stat-card__value--truncate" id="network" title="">-</span>
+      <span class="stat-card__sub" id="net-io">-</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">Uptime</span>
+      <span class="stat-card__value stat-card__value--uptime" id="uptime">-</span>
+    </div>
+  </div>
+
+  <div class="stat-grid stat-grid--battery">
+    <div class="stat-card stat-card--battery">
+      <span class="stat-card__label">Battery</span>
+      <span class="stat-card__value"><span id="battery-percent">-</span>%</span>
+      <span class="stat-card__bar"><span class="stat-card__bar-fill" id="battery-bar"></span></span>
+      <div class="stat-card__sub-row">
+        <span class="stat-card__sub" id="battery-status">-</span>
+        <span class="stat-card__sub" id="battery-watts">-</span>
+        <span class="stat-card__sub" id="battery-eta">-</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-panel" id="battery-chart-panel">
+    <div class="chart-panel__head">
+      <span class="chart-panel__title">Battery history</span>
+      <div class="chart-range" id="battery-range-tabs">
+        <button type="button" class="chart-range__opt is-active" data-hours="1">1h</button>
+        <button type="button" class="chart-range__opt" data-hours="24">1d</button>
+        <button type="button" class="chart-range__opt" data-hours="168">1w</button>
+        <button type="button" class="chart-range__opt" data-hours="720">1month</button>
+      </div>
+    </div>
+    <div class="chart-panel__graph" id="battery-graph">
+      <span class="chart-panel__empty">Loading history…</span>
+      <div class="chart-tooltip" id="battery-tooltip"></div>
+    </div>
+    <div class="chart-panel__ticks" id="battery-ticks"></div>
   </div>
 
   <script>
+  const CHART_W = 600;
+  const CHART_H = 120;
+  let batteryRangeHours = 1;
+  let lastBatteryHistory = [];
+
+  const RECENT_N = 5;
+  const cpuRecent = [];
+  const ramRecent = [];
+  const battRecent = [];
+
+  function pushRecent(arr, val) {
+      if (val == null || isNaN(val)) return;
+      arr.push(val);
+      if (arr.length > RECENT_N) arr.shift();
+  }
+
+  function avgOf(arr) {
+      if (!arr.length) return null;
+      return arr.reduce((a, b) => a + b, 0) / arr.length;
+  }
+
+  function levelClass(val) {
+      if (val == null) return '';
+      if (val >= 85) return 'is-danger';
+      if (val >= 60) return 'is-warn';
+      return '';
+  }
+
+  // Battery is the inverse of CPU/RAM/disk: low is the concerning
+  // state, not high, so it needs its own thresholds rather than
+  // reusing levelClass (which would paint a nearly-full battery red).
+  function batteryLevelClass(val, charging) {
+      if (val == null) return '';
+      if (charging) return 'is-ok';
+      if (val <= 20) return 'is-danger';
+      if (val <= 40) return 'is-warn';
+      return '';
+  }
+
+  function setBar(el, val, cls) {
+      if (!el) return;
+      el.style.width = Math.max(0, Math.min(100, val)) + '%';
+      el.classList.remove('is-warn', 'is-danger', 'is-ok');
+      if (cls) el.classList.add(cls);
+  }
+
+  function formatDuration(seconds) {
+      if (seconds == null || !isFinite(seconds)) return null;
+      const h = Math.floor(seconds / 3600);
+      const m = Math.round((seconds % 3600) / 60);
+      if (h <= 0) return `${m}m`;
+      return `${h}h ${m}m`;
+  }
+
+  function formatUptime(seconds) {
+      if (seconds == null) return '-';
+      const days = Math.floor(seconds / 86400);
+      const hours = Math.floor((seconds % 86400) / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      const parts = [];
+      if (days > 0) parts.push(`${days}d`);
+      parts.push(`${String(hours).padStart(2, '0')}h`);
+      parts.push(`${String(minutes).padStart(2, '0')}m`);
+      parts.push(`${String(secs).padStart(2, '0')}s`);
+      return parts.join(' ');
+  }
+
   async function refreshStats() {
       try {
           const res = await fetch("/dashboard/api/stats");
@@ -28,47 +146,206 @@
           }
           const data = await res.json();
 
+          pushRecent(cpuRecent, data.cpu.percent);
+          pushRecent(ramRecent, data.ram.percent);
+
           document.getElementById("cpu-percent").textContent = data.cpu.percent;
+          document.getElementById("cpu-avg").textContent = cpuRecent.length > 1 ? ` (avg ${avgOf(cpuRecent).toFixed(1)}%)` : '';
+          setBar(document.getElementById("cpu-bar"), data.cpu.percent, levelClass(data.cpu.percent));
           document.getElementById("cpu-cores").textContent = data.cpu.cores;
           document.getElementById("cpu-temp").textContent =
               data.cpu.temperature !== null ? data.cpu.temperature.toFixed(1) + " C" : "N/A";
 
           document.getElementById("ram-percent").textContent = data.ram.percent;
+          document.getElementById("ram-avg").textContent = ramRecent.length > 1 ? ` (avg ${avgOf(ramRecent).toFixed(1)}%)` : '';
+          setBar(document.getElementById("ram-bar"), data.ram.percent, levelClass(data.ram.percent));
           document.getElementById("ram-used").textContent = data.ram.used_gb;
           document.getElementById("ram-total").textContent = data.ram.total_gb;
 
-          document.getElementById("battery").textContent = data.battery
-              ? data.battery.percent + "% " + (data.battery.charging ? "(charging)" : "(on battery)")
-              : "No battery detected";
-
           document.getElementById("disk-percent").textContent = data.disk.percent;
+          setBar(document.getElementById("disk-bar"), data.disk.percent, levelClass(data.disk.percent));
           document.getElementById("disk-used").textContent = data.disk.used_gb;
           document.getElementById("disk-total").textContent = data.disk.total_gb;
 
+          const battPercentEl = document.getElementById("battery-percent");
+          const battBarEl = document.getElementById("battery-bar");
+          const battStatusEl = document.getElementById("battery-status");
+          const battWattsEl = document.getElementById("battery-watts");
+          const battEtaEl = document.getElementById("battery-eta");
+
+          if (data.battery) {
+              battPercentEl.textContent = data.battery.percent.toFixed(2);
+              setBar(battBarEl, data.battery.percent, batteryLevelClass(data.battery.percent, data.battery.charging));
+              battStatusEl.textContent = data.battery.charging ? "⚡ charging" : "🔋 discharging";
+              battWattsEl.textContent = data.battery.watts != null
+                  ? data.battery.watts.toFixed(2) + " W"
+                  : "wattage unavailable";
+
+              pushRecent(battRecent, data.battery.secsleft);
+              const avgSecs = avgOf(battRecent);
+              const dur = formatDuration(avgSecs);
+              battEtaEl.textContent = dur
+                  ? (data.battery.charging ? "~" + dur + " until full" : "~" + dur + " until empty")
+                  : "no estimate available";
+          } else {
+              battPercentEl.textContent = "--";
+              setBar(battBarEl, 0, '');
+              battStatusEl.textContent = "no battery detected";
+              battWattsEl.textContent = "";
+              battEtaEl.textContent = "";
+          }
+
           const interfaces = data.network.interfaces;
-          const ifaceText = Object.entries(interfaces).map(([name, ip]) => name + ": " + ip).join(", ");
-          document.getElementById("network").textContent = ifaceText || "No active interfaces";
+          const names = Object.keys(interfaces);
+          const ifaceText = names.join(", ");
+          const networkEl = document.getElementById("network");
+          networkEl.textContent = ifaceText || "No active interfaces";
+          networkEl.title = names.map((name) => `${name}: ${interfaces[name]}`).join(", ");
           document.getElementById("net-io").textContent =
               data.network.sent_mb + " MB sent / " + data.network.recv_mb + " MB received";
 
-          document.getElementById("uptime").textContent = data.uptime;
+          document.getElementById("uptime").textContent = formatUptime(data.uptime.seconds);
       } catch (err) {
           console.error("Failed to refresh dashboard stats", err);
       }
   }
 
+  function buildBatterySvg(history) {
+      if (!history || history.length < 2) return '';
+
+      const minTs = history[0].ts;
+      const maxTs = history[history.length - 1].ts;
+      const span = Math.max(maxTs - minTs, 1);
+      const pad = 4;
+      const usableH = CHART_H - pad * 2;
+
+      const points = history.map((p) => ({
+          x: ((p.ts - minTs) / span) * CHART_W,
+          y: pad + usableH - (Math.max(0, Math.min(100, p.percent)) / 100) * usableH,
+          charging: p.charging,
+      }));
+
+      const linePath = points
+          .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+          .join(' ');
+      const areaPath = `${linePath} L${points[points.length - 1].x.toFixed(1)},${CHART_H} `
+          + `L${points[0].x.toFixed(1)},${CHART_H} Z`;
+
+      const chargeDots = points
+          .filter((p) => p.charging)
+          .map((p) => `<circle cx="${p.x.toFixed(1)}" cy="${(CHART_H - 3).toFixed(1)}" r="1.6" class="dashboard-chart__charge-dot" />`)
+          .join('');
+
+      const last = points[points.length - 1];
+
+      return `<svg viewBox="0 0 ${CHART_W} ${CHART_H}" preserveAspectRatio="none" class="dashboard-chart">`
+          + `<line x1="0" y1="${(pad + usableH / 2).toFixed(1)}" x2="${CHART_W}" y2="${(pad + usableH / 2).toFixed(1)}" class="dashboard-chart__midline" />`
+          + `<path d="${areaPath}" class="dashboard-chart__area" />`
+          + `<path d="${linePath}" class="dashboard-chart__line" />`
+          + chargeDots
+          + `<circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="2.5" class="dashboard-chart__dot" />`
+          + `</svg>`;
+  }
+
+  function formatBatteryTick(hours) {
+      if (hours > 24) return (ts) => new Date(ts * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' });
+      if (hours > 1) return (ts) => new Date(ts * 1000).toLocaleTimeString([], { hour: 'numeric' });
+      return (ts) => new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderBatteryGraph(history) {
+      const graph = document.getElementById("battery-graph");
+      const ticksEl = document.getElementById("battery-ticks");
+      lastBatteryHistory = history || [];
+      if (!history || history.length < 2) {
+          graph.innerHTML = '<span class="chart-panel__empty">Not enough history yet — check back in a bit.</span><div class="chart-tooltip" id="battery-tooltip"></div>';
+          ticksEl.innerHTML = '';
+          return;
+      }
+      graph.innerHTML = buildBatterySvg(history) + '<div class="chart-tooltip" id="battery-tooltip"></div>';
+      const fmt = formatBatteryTick(batteryRangeHours);
+      const first = history[0].ts;
+      const mid = history[Math.floor(history.length / 2)].ts;
+      const last = history[history.length - 1].ts;
+      ticksEl.innerHTML = [first, mid, last].map((ts) => `<span>${fmt(ts)}</span>`).join('');
+  }
+
+  function formatTooltipTs(ts) {
+      return new Date(ts * 1000).toLocaleString([], {
+          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+  }
+
+  function initBatteryHover() {
+      const graph = document.getElementById("battery-graph");
+      graph.addEventListener("mousemove", (evt) => {
+          if (lastBatteryHistory.length < 2) return;
+          const tooltip = document.getElementById("battery-tooltip");
+          if (!tooltip) return;
+          const rect = graph.getBoundingClientRect();
+          const xFrac = Math.max(0, Math.min(1, (evt.clientX - rect.left) / rect.width));
+          const idx = Math.round(xFrac * (lastBatteryHistory.length - 1));
+          const point = lastBatteryHistory[idx];
+          if (!point) return;
+
+          tooltip.innerHTML = `<strong>${point.percent.toFixed(1)}%</strong>`
+              + (point.watts != null ? ` · ${point.watts.toFixed(2)} W` : '')
+              + `<br>${point.charging ? 'charging' : 'discharging'} · ${formatTooltipTs(point.ts)}`;
+          tooltip.style.display = 'block';
+          const left = Math.max(4, Math.min(rect.width - 4, xFrac * rect.width));
+          tooltip.style.left = left + 'px';
+          tooltip.style.top = '4px';
+          tooltip.classList.toggle('chart-tooltip--right', xFrac > 0.7);
+      });
+      graph.addEventListener("mouseleave", () => {
+          const tooltip = document.getElementById("battery-tooltip");
+          if (tooltip) tooltip.style.display = 'none';
+      });
+  }
+
+  async function fetchBatteryHistory() {
+      try {
+          const res = await fetch(`/dashboard/api/battery-history?hours=${batteryRangeHours}`);
+          if (!res.ok) return;
+          const history = await res.json();
+          renderBatteryGraph(history);
+      } catch (err) {
+          console.error("Failed to refresh battery history", err);
+      }
+  }
+
+  function initBatteryRangeTabs() {
+      const wrap = document.getElementById("battery-range-tabs");
+      const opts = Array.from(wrap.querySelectorAll(".chart-range__opt"));
+      opts.forEach((opt) => {
+          opt.addEventListener("click", () => {
+              const hours = parseFloat(opt.dataset.hours);
+              if (!hours || hours === batteryRangeHours) return;
+              batteryRangeHours = hours;
+              opts.forEach((o) => o.classList.toggle("is-active", o === opt));
+              fetchBatteryHistory();
+          });
+      });
+  }
+
   refreshStats();
-  setInterval(refreshStats, 3000);
+  setInterval(refreshStats, 1000);
+
+  initBatteryRangeTabs();
+  initBatteryHover();
+  fetchBatteryHistory();
+  setInterval(fetchBatteryHistory, 30000);
   </script>
-</div>
 </div>
 {% else %}
 <div class="page-shell">
   <div class="auth-gate">
     <h1>Dashboard Preview</h1>
     <p>These tools are built primarily for people on the Pisay LAN / school wifi. Pair your device or log in with root access to unlock private features.</p>
-    <a href="/auth/login" class="btn">Login / Register</a>
-    <a href="/auth/root" class="btn">Root Login</a>
+    <div class="btn-row">
+      <a href="/auth/login" class="btn">Login / Register</a>
+      <a href="/auth/root" class="btn btn--primary">Root Login</a>
+    </div>
   </div>
 </div>
 {% endif %}

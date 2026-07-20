@@ -1,0 +1,55 @@
+<div class="page-grid">
+    <div class="card">
+        <h2 class="card-title">Add Parent Account</h2>
+        <p class="card-subtitle">
+            Link a guardian account (numeric username) so you can view leave passes
+            using their credentials.
+        </p>
+
+        <form class="login-form" method="POST" action="{{ url_for('add_parent') }}">
+            <div class="form-field">
+                <label for="parent_username">Parent username</label>
+                <input id="parent_username"
+                       name="parent_username"
+                       inputmode="numeric"
+                       pattern="[0-9]+"
+                       placeholder="e.g. 23007260"
+                       required
+                       autocomplete="username">
+            </div>
+            <div class="form-field">
+                <label for="parent_password">Parent password</label>
+                <input id="parent_password"
+                       name="parent_password"
+                       type="password"
+                       placeholder="Password"
+                       required
+                       autocomplete="current-password">
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Link Parent Account</button>
+                <a href="/app/leave-passes?mode=parent" class="btn btn-ghost" data-spa-link>Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    {% if parent_accounts %}
+    <aside class="card card-muted">
+        <h3 class="card-title-sm">Linked accounts</h3>
+        <ul class="linked-account-list">
+            {% for account in parent_accounts %}
+            <li class="linked-account-item">
+                <div>
+                    <span class="linked-account-name">{{ account.parent_username }}</span>
+                    <span class="linked-account-meta">Linked {{ account.linked_at }}</span>
+                </div>
+                <form method="POST" action="{{ url_for('remove_parent', parent_id=account.id) }}">
+                    <input type="hidden" name="next" value="/app/parent/add">
+                    <button type="submit" class="btn btn-ghost btn-sm">Remove</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+    </aside>
+    {% endif %}
+</div>

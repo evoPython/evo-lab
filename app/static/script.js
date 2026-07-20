@@ -307,7 +307,7 @@
      since those are real page loads, not tab switches
      ------------------------------------------------------------ */
   function initPageTransitions() {
-    const EXIT_MS = 200;
+    const EXIT_MS = 130;
 
     document.addEventListener('click', (e) => {
       const link = e.target.closest('a[href]');
@@ -427,8 +427,8 @@
       if (i <= TAGLINE_TEXT.length) {
         // slower base pace with real per-character randomness, plus an
         // extra pause right after finishing a word (i.e. at a space)
-        const base = 55 + Math.random() * 95;
-        const wordPause = justTyped === ' ' ? 180 + Math.random() * 220 : 0;
+        const base = 20 + Math.random() * 70;
+        const wordPause = justTyped === ' ' ? 100 + Math.random() * 100 : 0;
         taglineTimer = setTimeout(step, base + wordPause);
       }
     })();
@@ -441,7 +441,12 @@
      then ripples outward and fades on release.
      ------------------------------------------------------------ */
   (function initCursorBlob() {
-    const glowLayer = document.querySelector('#homeApp .rh-grid-glow');
+    // cursor blobs go in .rh-grid-glow__blobs, not .rh-grid-glow itself —
+    // that outer layer is now enlarged + parallax-transformed to stay
+    // pixel-locked with the dot grid (see home.css), while this inner
+    // layer cancels that transform back out to plain viewport
+    // coordinates, which is what clientX/clientY below assume.
+    const glowLayer = document.querySelector('#homeApp .rh-grid-glow__blobs');
     if (!glowLayer || prefersReducedMotion) return;
 
     const LERP = 0.08; // lower = smoother/laggier trail
@@ -523,6 +528,10 @@
     currentIndex = index;
 
     if (track) track.style.transform = `translateX(-${index * 25}%)`;
+    // dot-grid parallax: a small fraction of the track's own shift,
+    // same direction, so the background reads as drifting slightly
+    // slower/behind the foreground rather than staying rigidly fixed.
+    setGridParallaxX(-index * 42);
 
     let activeLink = null;
     navLinks?.querySelectorAll('a').forEach((a) => {
@@ -569,6 +578,84 @@
     const active = navLinks?.querySelector('a[aria-current="page"]');
     moveCursor(active);
   });
+
+  /* ---- cubic-bezier solver, mirroring var(--rh-ease) ----
+     (0.65, 0, 0.35, 1) — the same curve the track itself transitions
+     with. Kept as a plain JS function rather than reading the CSS
+     transition live (which would mean going back to a per-frame
+     getComputedStyle call, exactly what was removed from
+     pfp-float.js for being wasteful). If --rh-ease ever changes in
+     CSS, update the control points below to match. */
+  function makeCubicBezier(x1, y1, x2, y2) {
+    const a = (u, v) => 1 - 3 * v + 3 * u;
+    const b = (u, v) => 3 * v - 6 * u;
+    const c = (u) => 3 * u;
+    const calc = (t, u, v) => ((a(u, v) * t + b(u, v)) * t + c(u)) * t;
+    const slope = (t, u, v) => 3 * a(u, v) * t * t + 2 * b(u, v) * t + c(u);
+    function tForX(x) {
+      let t = x;
+      for (let i = 0; i < 8; i++) {
+        const s = slope(t, x1, x2);
+        if (Math.abs(s) < 1e-6) break;
+        t -= (calc(t, x1, x2) - x) / s;
+      }
+      return t;
+    }
+    return (x) => calc(tForX(x), y1, y2);
+  }
+  const rhEase = makeCubicBezier(0.65, 0, 0.35, 1);
+  const RH_DUR_SLOW_MS = 600; // mirrors var(--rh-dur-slow)
+
+  /* ---- dot-grid horizontal parallax: tweened on the exact same
+     curve+duration as the track's own transition (rather than an
+     approximate lerp), so it reads as genuinely riding along with the
+     page transition instead of just a vaguely-similar easing. ---- */
+  let gridXCurrent = 0;
+  let gridXTweenRaf = null;
+  function setGridParallaxX(target) {
+    if (prefersReducedMotion) {
+      gridXCurrent = target;
+      homeApp.style.setProperty('--rh-grid-parallax-x', `${target}px`);
+      return;
+    }
+    if (gridXTweenRaf !== null) cancelAnimationFrame(gridXTweenRaf);
+    const from = gridXCurrent;
+    const delta = target - from;
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - start) / RH_DUR_SLOW_MS);
+      gridXCurrent = from + delta * rhEase(t);
+      homeApp.style.setProperty('--rh-grid-parallax-x', `${gridXCurrent.toFixed(2)}px`);
+      gridXTweenRaf = t < 1 ? requestAnimationFrame(step) : null;
+    }
+    gridXTweenRaf = requestAnimationFrame(step);
+  }
+
+  /* ---- dot-grid vertical parallax ----
+     Scrolling down inside a panel should read as "moving down the
+     page", so the (farther-away) background dots drift up a little
+     behind you. Re-targeted and re-evaluated every frame (rather than
+     a CSS transition) so a fast string of scroll events tracks live
+     instead of each one queuing up an animation that only visibly
+     resolves once scrolling stops. scroll events don't bubble, but
+     they do fire during the capture phase on ancestors, so one
+     listener up here catches scrolling from whichever .panel is
+     active without needing one per panel. */
+  let gridYTarget = 0, gridYCurrent = 0, gridYRaf = null;
+  function gridYTick() {
+    gridYCurrent += (gridYTarget - gridYCurrent) * 0.2;
+    homeApp.style.setProperty('--rh-grid-parallax-y', `${gridYCurrent.toFixed(2)}px`);
+    gridYRaf = Math.abs(gridYTarget - gridYCurrent) < 0.05 ? null : requestAnimationFrame(gridYTick);
+  }
+  if (!prefersReducedMotion) {
+    const GRID_SCROLL_FACTOR = 0.07;
+    const GRID_SCROLL_MAX = 22; // px
+    document.addEventListener('scroll', (e) => {
+      if (!e.target || !e.target.classList || !e.target.classList.contains('panel')) return;
+      gridYTarget = Math.max(-GRID_SCROLL_MAX, Math.min(GRID_SCROLL_MAX, -e.target.scrollTop * GRID_SCROLL_FACTOR));
+      if (gridYRaf === null) gridYRaf = requestAnimationFrame(gridYTick);
+    }, { capture: true, passive: true });
+  }
 
   document.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -711,7 +798,10 @@
         <div class="rh-modal__visual" aria-hidden="true"><span class="rh-modal__visual-label">NO IMAGE</span></div>
       </div>
       <div class="rh-field"><label>more</label><p>${p.body || ''}</p></div>
-      <div class="rh-links"><a href="${p.link}" data-fake-link>source</a></div>
+      <div class="rh-links">
+        <a href="${p.link}" data-fake-link>source</a>
+        ${p.id === 'evo-lab' ? '<a href="/auth/login">visit lab</a>' : ''}
+      </div>
     `;
     modalOverlay.classList.add('open');
     document.body.style.overflow = 'hidden';

@@ -1,0 +1,405 @@
+/* ============================================================
+   MUSIC TOOL
+   ============================================================ */
+/* Bottom padding for the sticky player bar is applied globally on
+   .app-content (see app-shell.css) via --player-h, which
+   music-player.js keeps in sync with the bar's real height — so
+   content never sits underneath it regardless of breakpoint. */
+
+.music-section { margin-top: 28px; }
+.music-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24px;
+}
+.music-section__head .h2 { display: flex; align-items: center; gap: 8px; }
+
+.music-section .form-row input[type="text"] { flex: 1; min-width: 0; }
+
+.music-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.music-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  background: var(--panel);
+}
+.music-row__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.music-row__title {
+  color: var(--text);
+  font-size: var(--fs-base);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.music-row__meta {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+.music-row__actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.music-row--pending { border-style: dashed; }
+.music-row--pending .music-row__meta { color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
+.music-row--error .music-row__meta { color: var(--danger); }
+
+/* ---- playlists ---- */
+.pl-search { width: 100%; margin-top: 8px; box-sizing: border-box; }
+.playlist-manage {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px 14px;
+  background: var(--bg-soft);
+}
+.playlist-manage .music-list { margin-top: 8px; }
+.music-row--sub { padding: 6px 10px; background: transparent; border-style: dashed; }
+
+/* Playlist rows carry Loop/Shuffle plus an overflow menu (Manage/
+   Rename/Delete) — stack title above the action row on narrow
+   screens so nothing crowds or wraps mid-word. */
+@media (max-width: 640px) {
+  .playlist-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .playlist-row .music-row__actions > [data-action="pl-loop"],
+  .playlist-row .music-row__actions > [data-action="pl-shuffle"] {
+    flex: 1;
+  }
+}
+
+/* Extra scroll room at the bottom of the music page specifically (on
+   top of the global --player-h padding-bottom every page with the
+   player bar gets) — on mobile the last library rows otherwise sit
+   flush against the sticky bar with no breathing room to scroll past.
+   A real spacer element (rather than padding/margin on the shell) so
+   it always adds real, visible flow height no matter how the page's
+   scroll container is set up. */
+.music-scroll-spacer { display: block; height: 30vh; }
+@media (max-width: 720px) {
+  .music-scroll-spacer { height: 50vh; }
+}
+
+/* ---- currently-playing indicator ---- */
+.music-row.is-playing {
+  border-color: var(--accent-dim);
+  background: var(--accent-soft);
+}
+.music-row.is-playing .music-row__title { color: var(--accent); }
+.music-row.is-playing .music-row__title::before {
+  content: '\266B  ';
+  color: var(--accent);
+}
+
+/* ---- toast feedback ---- */
+.music-toasts {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--player-h, 0px) + 16px);
+  transform: translateX(-50%);
+  z-index: 500;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  align-items: center;
+  width: min(90vw, 380px);
+  pointer-events: none;
+}
+.music-toast {
+  pointer-events: auto;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  animation: toast-in 0.18s var(--ease);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.music-toast--error { border-color: var(--danger); color: var(--danger); }
+.music-toast.is-leaving { animation: toast-out 0.16s var(--ease) forwards; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes toast-out { to { opacity: 0; transform: translateY(6px) scale(0.98); } }
+
+/* flash the now-playing bar briefly whenever the track changes, so
+   pressing play/loop/shuffle has an unmistakable visual echo. Ramps
+   up then fades as a soft diffuse glow rather than snapping a hard
+   border in and out. */
+.music-player.flash { animation: player-flash 0.9s ease-out; }
+@keyframes player-flash {
+  0% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+  35% { box-shadow: 0 0 28px 6px var(--accent-soft-2); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+}
+
+/* ---- kebab dropdown menu (playlist row overflow actions) ---- */
+.menu { position: relative; }
+.menu__trigger { font-size: 18px; padding: 6px 12px; line-height: 1; }
+.menu__panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 170px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 30;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  animation: menu-in 0.12s var(--ease);
+}
+.menu__panel.is-open { display: flex; }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.menu__panel button {
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  min-height: 36px;
+}
+.menu__panel button:hover, .menu__panel button:focus-visible { background: var(--panel-hover); color: var(--text); }
+.menu__item--danger { color: var(--danger) !important; }
+.menu__item--danger:hover { background: rgba(224, 138, 122, 0.14) !important; }
+
+.music-spinner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  display: inline-block;
+  animation: music-spin 0.7s linear infinite;
+}
+@keyframes music-spin { to { transform: rotate(360deg); } }
+
+/* ---- sticky now-playing bar (Spotify-style transport) ---- */
+.music-player {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: var(--bg-soft);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+}
+@media (min-width: 900px) {
+  .music-player { left: var(--sidenav-w); }
+}
+
+.music-player__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 10px clamp(16px, 3vw, 32px);
+  min-height: 64px;
+}
+
+/* -- left: art + title/artist -- */
+.music-player__track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.music-player__art {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  font-size: 18px;
+}
+.music-player__trackinfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.music-player__title {
+  color: var(--text);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.music-player__artist {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* -- center: transport + seek -- */
+.music-player__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.music-player__transport {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.music-player__btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 16px;
+  line-height: 1;
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+.music-player__btn:hover { color: var(--text); background: var(--panel-hover); }
+.music-player__btn:active { transform: scale(0.92); }
+.music-player__btn--main {
+  width: 34px;
+  height: 34px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 14px;
+}
+.music-player__btn--main:hover { background: var(--text); opacity: 0.9; }
+.music-player__btn:disabled { opacity: 0.35; cursor: default; }
+.music-player__btn--stop { color: var(--text-faint); font-size: 11px; }
+
+.music-player__seek {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 520px;
+}
+.music-player__time {
+  color: var(--text-faint);
+  font-size: 11px;
+  min-width: 32px;
+  text-align: center;
+}
+.music-player__seek input[type="range"] { flex: 1; }
+
+/* -- right: output / volume / save -- */
+.music-player__side {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+.music-output {
+  display: flex;
+  gap: 4px;
+}
+.music-player__volume-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.music-player__volicon { font-size: 13px; color: var(--text-faint); }
+.music-player__volume { width: 80px; }
+
+/* ---- Mobile: collapse into a compact bar ---- */
+@media (max-width: 720px) {
+  .music-player__inner {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "track   transport"
+      "seek    seek"
+      "side    side";
+    gap: 4px 10px;
+    padding: 8px 14px 10px;
+    min-height: unset;
+  }
+  .music-player__track { grid-area: track; }
+  .music-player__center { grid-area: seek; }
+  .music-player__transport { grid-area: transport; gap: 6px; }
+  .music-player__seek { max-width: none; }
+
+  .music-player__side { grid-area: side; justify-content: space-between; }
+  .music-output { flex: 1; }
+  .music-output button { flex: 1; padding: 6px 4px; font-size: 12px; }
+  .music-player__volume-wrap { display: none; }
+  .music-player__btn--stop { display: none; }
+}
+
+@media (max-width: 380px) {
+  .music-player__art { width: 32px; height: 32px; font-size: 14px; }
+  .music-player__title { font-size: 13px; }
+  .music-player__artist { font-size: 11px; }
+}
+
+/* ---- mini variant (dashboard.html): transport + seek only ---- */
+.music-player--mini .music-player__inner {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}

@@ -3,10 +3,15 @@
    A single-focus workspace: one view at a time, switched with
    deliberate motion. Flat, quiet, monospace-accented.
 
-   This file used to hold everything (~2300 lines). It's now
-   just an import manifest — the actual rules live in the
-   files below, split along the section headers that were
-   already here.
+   NOTE: this file is no longer loaded — @import chains like the one
+   below are render-blocking and serial (the browser has to fetch
+   this file, discover the imports, then fetch each of THOSE before
+   it can finish parsing, one after another), which was adding a slow
+   multi-hop waterfall before the page could paint anything. Every
+   file below is now linked directly from base.html's <head> instead,
+   in the same order, so they load in parallel. This manifest is kept
+   only as a reference for that ordering — don't add it back as an
+   @import chain.
    ============================================================ */
 
 /* ---- base: variables, reset, shared page-transition rules ---- */
@@ -29,11 +34,16 @@
 @import url("home/letter.css");
 @import url("home/fun.css");
 
-/* ---- app: the other, multi-page app-shell screens ---- */
+/* ---- app: the other, multi-page app-shell screens ----
+   app_base.html links every file below directly, in this order —
+   this list is reference only. */
 @import url("app/app-nav.css");
+@import url("app/buttons.css");
 @import url("app/auth.css");
 @import url("app/tools.css");
+@import url("app/dashboard.css");
 @import url("app/page-shell.css");
 @import url("app/remote-dashboard.css");
 @import url("app/cross-remote.css");
 @import url("app/inbox.css");
+@import url("app/clipboard.css");

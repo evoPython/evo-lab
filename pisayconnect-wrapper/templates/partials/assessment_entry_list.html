@@ -1,0 +1,70 @@
+{% for item in data %}
+<div class="assessment-entry-card assessment-entry-collapsible{% if not item.is_submitted %} assessment-entry-pending{% endif %}"
+     {% if item.id %}data-entry-id="{{ item.id }}"{% endif %}
+     tabindex="0"
+     role="button"
+     aria-expanded="false">
+    <div class="assessment-entry-header">
+        <h3 class="assessment-entry-title">{{ item.description or "Assessment" }}</h3>
+        <div class="assessment-entry-status">
+            {% if item.is_submitted %}
+            <span class="status-badge status-approved">Submitted</span>
+            {% else %}
+            <span class="status-badge status-pending">Not submitted</span>
+            {% endif %}
+            <span class="assessment-entry-chevron" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            </span>
+        </div>
+    </div>
+    <dl class="assessment-entry-details">
+        {% if item.category %}
+        <div class="detail-row">
+            <dt>Category</dt>
+            <dd>{{ item.category }}</dd>
+        </div>
+        {% endif %}
+        {% if item.date_conducted %}
+        <div class="detail-row">
+            <dt>Conducted</dt>
+            <dd>
+                <time{% if item.date_conducted_iso %} datetime="{{ item.date_conducted_iso }}"{% endif %} class="assessment-date">
+                    {{ item.date_conducted }}
+                </time>
+            </dd>
+        </div>
+        {% endif %}
+        {% if item.deadline %}
+        <div class="detail-row">
+            <dt>Deadline</dt>
+            <dd>
+                <time{% if item.deadline_iso %} datetime="{{ item.deadline_iso }}"{% endif %} class="assessment-date">
+                    {{ item.deadline }}
+                </time>
+            </dd>
+        </div>
+        {% endif %}
+        {% if item.score_display %}
+        <div class="detail-row">
+            <dt>Score</dt>
+            <dd class="assessment-score">{{ item.score_display }}</dd>
+        </div>
+        {% elif item.is_submitted and not item.is_show_score %}
+        <div class="detail-row">
+            <dt>Score</dt>
+            <dd class="detail-pending">Not yet posted</dd>
+        </div>
+        {% endif %}
+        {% if item.date_modified %}
+        <div class="detail-row detail-row-full">
+            <dt>Last updated</dt>
+            <dd>
+                <time{% if item.date_modified_iso %} datetime="{{ item.date_modified_iso }}"{% endif %} class="assessment-date">
+                    {{ item.date_modified }}
+                </time>
+            </dd>
+        </div>
+        {% endif %}
+    </dl>
+</div>
+{% endfor %}

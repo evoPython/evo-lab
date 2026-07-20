@@ -1,0 +1,29 @@
+<nav class="pagination{% if pagination_class %} {{ pagination_class }}{% endif %}"
+     {% if pagination_id %}id="{{ pagination_id }}"{% endif %}
+     aria-label="Pagination">
+    {% if prev_url %}
+    <a href="{{ prev_url }}" class="pagination-btn"{% if spa_link %} data-spa-link{% endif %} aria-label="Previous page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        <span>Previous</span>
+    </a>
+    {% else %}
+    <span class="pagination-btn is-disabled" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        <span>Previous</span>
+    </span>
+    {% endif %}
+
+    <span class="pagination-page" aria-current="page">Page {{ page }}</span>
+
+    {% if next_url %}
+    <a href="{{ next_url }}" class="pagination-btn"{% if spa_link %} data-spa-link{% endif %} aria-label="Next page">
+        <span>Next</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+    </a>
+    {% else %}
+    <span class="pagination-btn is-disabled" aria-hidden="true">
+        <span>Next</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+    </span>
+    {% endif %}
+</nav>

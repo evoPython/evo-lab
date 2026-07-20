@@ -49,11 +49,40 @@
   /* ---- live read of the track's current slide offset ----
      Used to derive where the home panel's left/right edges
      currently sit in viewport (fixed-position) coordinates,
-     including mid-transition values. */
-  function trackShiftPx() {
+     including mid-transition values.
+
+     getComputedStyle() forces a style recalculation, so calling it
+     unconditionally from the 60fps tick() loop below was doing that
+     forever, even during the ~99% of the time nothing is actually
+     transitioning. Instead: only read the live value while a
+     transform transition is actually running on the track (tracked
+     via the native transitionrun/transitionend events), and reuse a
+     cached number the rest of the time. */
+  let isTrackTransitioning = false;
+  let cachedShift = 0;
+  track.addEventListener('transitionrun', (e) => {
+    if (e.propertyName === 'transform') isTrackTransitioning = true;
+  });
+  track.addEventListener('transitionend', (e) => {
+    if (e.propertyName !== 'transform') return;
+    isTrackTransitioning = false;
+    cachedShift = readTrackShiftPx();
+  });
+  track.addEventListener('transitioncancel', (e) => {
+    if (e.propertyName !== 'transform') return;
+    isTrackTransitioning = false;
+    cachedShift = readTrackShiftPx();
+  });
+
+  function readTrackShiftPx() {
     const t = getComputedStyle(track).transform;
     if (!t || t === 'none') return 0;
     try { return new DOMMatrixReadOnly(t).m41; } catch (e) { return 0; }
+  }
+
+  function trackShiftPx() {
+    if (isTrackTransitioning) cachedShift = readTrackShiftPx();
+    return cachedShift;
   }
 
   /* ---- state ---- */
@@ -129,8 +158,16 @@
 
   function placeInitial() {
     const s = size();
-    x = viewW() * 0.76 - s / 2;
-    y = viewH() * 0.26 - s / 2;
+    // random spot, but kept clear of the nav bar up top and the
+    // footer/mobile tab bar down below so it never spawns overlapping
+    // fixed chrome.
+    const marginX = 50, marginTop = 100, marginBottom = 90;
+    const spanX = Math.max(viewW() - s - marginX * 2, 20);
+    const spanY = Math.max(viewH() - s - marginTop - marginBottom, 20);
+    x = marginX + Math.random() * spanX;
+    y = marginTop + Math.random() * spanY;
+    angle = Math.random() * 360;
+    scatterVelocity(); // random initial direction/speed instead of a fixed one every load
   }
   requestAnimationFrame(placeInitial);
 

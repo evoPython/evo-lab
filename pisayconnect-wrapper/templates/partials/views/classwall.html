@@ -1,0 +1,35 @@
+<div class="card cache-managed" data-cache-refresh="{{ cache_refresh_url }}">
+    <div class="card-header-row">
+        <h2 class="card-title">Class Wall</h2>
+        <div class="classwall-header-controls">
+            {% with view="classwall", school_years=school_years, selected_school_year=selected_school_year %}
+            {% include "partials/school_year_select.html" %}
+            {% endwith %}
+            <div class="sync-status" aria-live="polite" data-state="idle">
+                <span class="sync-status-indicator" aria-hidden="true"></span>
+                <span class="sync-status-text">Up to date</span>
+            </div>
+        </div>
+    </div>
+
+    {% set year_query = '&schoolYear=' ~ selected_school_year if selected_school_year else '' %}
+    {% set prev_url = '/app/classwall?page=' ~ (page - 1) ~ year_query if page > 1 else none %}
+    {% set next_url = '/app/classwall?page=' ~ (page + 1) ~ year_query if has_next else none %}
+    {% with page=page, prev_url=prev_url, next_url=next_url, pagination_id='pagination', spa_link=true %}
+    {% include "partials/pagination.html" %}
+    {% endwith %}
+
+    <div id="post-list">
+        {% if data %}
+        <div class="post-list">
+            {% include "partials/post_list.html" %}
+        </div>
+        {% else %}
+        {% include "partials/empty_posts.html" %}
+        {% endif %}
+    </div>
+
+    {% with page=page, prev_url=prev_url, next_url=next_url, pagination_id='pagination-bottom', spa_link=true, pagination_class='pagination-bottom' %}
+    {% include "partials/pagination.html" %}
+    {% endwith %}
+</div>

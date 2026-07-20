@@ -9,11 +9,15 @@
 
 <div id="homeApp">
 
+  <div class="rh-grid-dots" aria-hidden="true"></div>
+
   <div class="rh-grid-glow" aria-hidden="true">
-    <span class="rh-blob rh-blob--1"></span>
-    <span class="rh-blob rh-blob--2"></span>
-    <span class="rh-blob rh-blob--3"></span>
-    <span class="rh-blob rh-blob--4"></span>
+    <div class="rh-grid-glow__blobs">
+      <span class="rh-blob rh-blob--1"></span>
+      <span class="rh-blob rh-blob--2"></span>
+      <span class="rh-blob rh-blob--3"></span>
+      <span class="rh-blob rh-blob--4"></span>
+    </div>
   </div>
 
   <div class="rh-intro" id="introOverlay">
@@ -21,6 +25,7 @@
       <p class="rh-intro__eyebrow mono">evo<span class="accent-dim">.ftp.sh</span></p>
       <h1 class="rh-intro__title">welcome to my slice of the internet</h1>
       <button class="rh-intro__btn" id="introBtn" type="button">visit site <span class="arrow">→</span></button>
+      <p class="rh-intro__mobile-note mono">⚠ this site is best viewed on desktop</p>
     </div>
   </div>
 
@@ -54,8 +59,8 @@
       <section class="panel" id="panel-about" data-route="about">
         <div class="inner">
           <p class="eyebrow">about</p>
-          <h1>about</h1>
-          <p>Here's what's currently pinned up in my head — <span class="accent rh-drag-hint">drag them around if you'd like.</span></p>
+          <h1>about me</h1>
+          <p>work in progress!</p>
 
           <div class="rh-board" id="board">
             <p class="rh-board-caption">woah, about me text.</p>
@@ -90,7 +95,7 @@
         <div class="inner">
           <p class="eyebrow">projects</p>
           <h1>things I've built</h1>
-          <p>A handful of the ones I still open on purpose. Tap any of them for the longer version.</p>
+          <p>Some things I've built for others, or to solve problems of my own.</p>
           <div class="rh-project-list" id="projectList"></div>
         </div>
       </section>

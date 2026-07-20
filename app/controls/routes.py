@@ -86,6 +86,15 @@ def brightness_down():
     return _perform(brightness.brightness_down, "Brightness down", err_cls=brightness.BrightnessError)
 
 
+@controls.route("/media/status")
+@require_personal_device
+def media_status():
+    try:
+        return jsonify(media_keys.get_status())
+    except media_keys.MediaKeyError as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
 @controls.route("/media/playpause", methods=["POST"])
 @require_personal_device
 def media_playpause():

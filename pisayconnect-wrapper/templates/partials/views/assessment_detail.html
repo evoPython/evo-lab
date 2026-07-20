@@ -1,0 +1,64 @@
+{% set assessments_back_url = '/app/assessments?archived=1' if is_archived|default(false) else '/app/assessments' %}
+{% set assessments_back_label = 'Archived Classes' if is_archived|default(false) else 'Assessments' %}
+<div class="card cache-managed" data-cache-refresh="{{ cache_refresh_url }}">
+    <div class="card-header-row card-header-row-assessment-detail">
+        <div class="card-header-main">
+            <div class="assessment-detail-nav">
+                <p class="breadcrumb">
+                    <a href="{{ assessments_back_url }}" data-spa-link>{{ assessments_back_label }}</a>
+                    <span class="breadcrumb-sep">/</span>
+                    <span>Subject</span>
+                </p>
+                <a href="{{ assessments_back_url }}" class="back-link" data-spa-link>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+                    <span>Back</span>
+                </a>
+            </div>
+            <div id="assessment-class-header">
+                {% include "partials/assessment_class_header.html" %}
+            </div>
+            <div class="card-header-actions-row assessment-detail-actions">
+                <button type="button"
+                        class="btn btn-sm assessment-archive-toggle{% if is_archived|default(false) %} is-unarchive{% else %} is-archive{% endif %}"
+                        data-enrollment-class-id="{{ enrollment_class_id }}"
+                        data-archived="{{ '1' if is_archived|default(false) else '0' }}">
+                    <span class="assessment-archive-toggle-label">
+                        {% if is_archived|default(false) %}Unarchive subject{% else %}Archive subject{% endif %}
+                    </span>
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="grade-summary-open">
+                    Grade breakdown
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="assessment-period-tabs">
+        {% include "partials/assessment_period_tabs.html" %}
+    </div>
+
+    <div id="assessment-entry-list" class="assessment-entry-list">
+        {% if data %}
+        {% include "partials/assessment_entry_list.html" %}
+        {% else %}
+        <div class="empty-state">
+            <p>{% if grading_periods %}No assessments found for this grading period.{% else %}No assessments found for this subject.{% endif %}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div id="grade-summary-modal" class="modal grade-summary-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="grade-summary-title">
+    <div class="modal-backdrop" data-modal-close></div>
+    <div class="modal-panel modal-panel-wide">
+        <div class="modal-header">
+            <h3 id="grade-summary-title" class="modal-title">Grade breakdown by period</h3>
+            <button type="button" class="modal-close" data-modal-close aria-label="Close">&times;</button>
+        </div>
+        <div class="grade-summary-body">
+            <div id="grade-summary-content">
+                {% include "partials/grade_summary_content.html" %}
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,40 @@
+<!-- Global now-playing bar. Logic lives in static/js/music-player.js. -->
+<div class="music-player" id="music-player">
+  <div class="music-player__inner">
+
+    <div class="music-player__track">
+      <span class="music-player__art" aria-hidden="true">&#9835;</span>
+      <div class="music-player__trackinfo">
+        <span class="music-player__title" id="np-title">Nothing playing</span>
+        <span class="music-player__artist" id="np-artist"></span>
+      </div>
+    </div>
+
+    <div class="music-player__center">
+      <div class="music-player__transport">
+        <button class="music-player__btn" id="np-prev" aria-label="Previous track">&#9198;</button>
+        <button class="music-player__btn music-player__btn--main" id="np-toggle" aria-label="Play or pause">&#9654;</button>
+        <button class="music-player__btn" id="np-next" aria-label="Next track">&#9197;</button>
+      </div>
+      <div class="music-player__seek">
+        <span class="music-player__time mono" id="np-position">0:00</span>
+        <input type="range" id="np-seekbar" min="0" max="100" value="0" step="1" aria-label="Seek">
+        <span class="music-player__time mono" id="np-duration">0:00</span>
+      </div>
+    </div>
+
+    <div class="music-player__side">
+      <button class="btn btn--sm btn--primary" id="np-download" style="display:none;">Save to library</button>
+      <div class="music-output" id="output-select">
+        <button class="btn btn--sm is-active" data-output="laptop">Laptop</button>
+        <button class="btn btn--sm" data-output="phone">Phone</button>
+        <button class="btn btn--sm" data-output="both">Both</button>
+      </div>
+      <button class="music-player__btn music-player__btn--stop" id="np-stop" aria-label="Stop">&#9632;</button>
+    </div>
+
+  </div>
+</div>
+
+<audio id="phone-audio" preload="none"></audio>
+<script src="{{ url_for('static', filename='js/music-player.js') }}"></script>

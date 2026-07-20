@@ -1,0 +1,47 @@
+{% for item in data %}
+<a href="/app/assessments/{{ item.enrollment_class_id }}"
+   class="assessment-class-card"
+   data-enrollment-class-id="{{ item.enrollment_class_id }}"
+   data-spa-link>
+    <div class="assessment-class-main">
+        <h3 class="assessment-class-title">
+            {% if item.course_code %}
+            <span class="course-code">{{ item.course_code }}</span>
+            {% endif %}
+            {% if item.course_name %}
+            <span class="course-name">{{ item.course_name }}</span>
+            {% elif item.description %}
+            <span class="course-name">{{ item.description }}</span>
+            {% endif %}
+        </h3>
+        {% if item.description and item.course_name %}
+        <p class="assessment-class-meta">{{ item.description }}</p>
+        {% endif %}
+        {% if item.schedule %}
+        <p class="assessment-class-meta">{{ item.schedule }}</p>
+        {% endif %}
+    </div>
+    <div class="assessment-class-stats">
+        <div class="stat-block">
+            <span class="stat-value">{{ item.total_submitted }}/{{ item.total_count }}</span>
+            <span class="stat-label">Submitted</span>
+        </div>
+        <div class="stat-block">
+            <span class="stat-value">{{ item.completed_percent }}%</span>
+            <span class="stat-label">Complete</span>
+        </div>
+        {% if item.pending_count %}
+        <div class="stat-block stat-block-warning">
+            <span class="stat-value">{{ item.pending_count }}</span>
+            <span class="stat-label">Pending</span>
+        </div>
+        {% endif %}
+        {% if item.notification_count %}
+        <div class="stat-block stat-block-alert">
+            <span class="stat-value">{{ item.notification_count }}</span>
+            <span class="stat-label">New</span>
+        </div>
+        {% endif %}
+    </div>
+</a>
+{% endfor %}

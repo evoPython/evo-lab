@@ -1,0 +1,115 @@
+/* ============================================================
+   BUTTONS — single source of truth for every button in the app.
+   Previously `.btn` had no base rule anywhere (only a stray
+   padding override in app-nav.css), so buttons only got what the
+   reset gave them and every page ended up looking different.
+   Everything below is scoped to `.btn` and its modifiers so any
+   button, anywhere in the app shell, looks and behaves the same.
+   ============================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 9px 16px;
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--text-dim);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.btn:hover,
+.btn:focus-visible {
+  color: var(--text);
+  background: var(--panel-hover);
+  border-color: var(--border-strong);
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ---- primary: the one emphasized action per view ---- */
+.btn--primary {
+  color: #0b0c0f;
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.btn--primary:hover,
+.btn--primary:focus-visible {
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+  color: #0b0c0f;
+}
+
+/* ---- danger: destructive / irreversible actions ---- */
+.btn--danger {
+  color: var(--danger);
+  background: rgba(224, 138, 122, 0.08);
+  border-color: rgba(224, 138, 122, 0.35);
+}
+.btn--danger:hover,
+.btn--danger:focus-visible {
+  color: var(--danger);
+  background: rgba(224, 138, 122, 0.16);
+  border-color: var(--danger);
+}
+
+/* ---- ghost: low-emphasis, for secondary/tertiary actions
+   sitting next to a primary one (e.g. "back", "decline") ---- */
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-faint);
+}
+.btn--ghost:hover,
+.btn--ghost:focus-visible {
+  color: var(--text);
+  background: var(--panel-hover);
+  border-color: var(--border);
+}
+
+/* ---- active/toggled state, e.g. a mode currently selected ---- */
+.btn.is-active {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent-dim);
+}
+
+/* ---- sizes ---- */
+.btn--sm {
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: var(--fs-sm);
+}
+.btn--block {
+  display: flex;
+  width: 100%;
+}
+
+/* ---- layout helper: a wrapping row of buttons, the common case
+   any time more than one button sits together outside a rc-btnrow
+   context (forms, controls, tool pages) ---- */
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Comfortable touch targets stay the default at every width — the
+   old override that only enlarged padding under 480px is gone,
+   .btn is touch-sized everywhere now. */

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}
+{% if class_info %}{{ class_info.course_code or class_info.description }} · Assessments{% else %}Subject assessments{% endif %} · PisayConnect
+{% endblock %}
+
+{% block content %}
+<div class="card cache-managed"{% if cache_refresh_url %} data-cache-refresh="{{ cache_refresh_url }}"{% endif %}>
+    <div class="card-header-row">
+        <div>
+            <p class="breadcrumb">
+                <a href="{{ url_for('assessments') }}">Assessments</a>
+                <span class="breadcrumb-sep">/</span>
+                <span>Subject</span>
+            </p>
+            <div id="assessment-class-header">
+                {% include "partials/assessment_class_header.html" %}
+            </div>
+        </div>
+        <div class="card-header-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="grade-summary-open">
+                Grade breakdown
+            </button>
+            <a href="{{ url_for('assessments') }}" class="btn btn-secondary btn-sm">All subjects</a>
+        </div>
+    </div>
+
+    {% if data is not none %}
+    <div id="assessment-period-tabs">
+        {% include "partials/assessment_period_tabs.html" %}
+    </div>
+
+    <div id="assessment-entry-list" class="assessment-entry-list">
+        {% if data %}
+        {% include "partials/assessment_entry_list.html" %}
+        {% else %}
+        <div class="empty-state">
+            <p>{% if grading_periods %}No assessments found for this grading period.{% else %}No assessments found for this subject.{% endif %}</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div id="grade-summary-modal" class="modal grade-summary-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="grade-summary-title">
+    <div class="modal-backdrop" data-modal-close></div>
+    <div class="modal-panel modal-panel-wide">
+        <div class="modal-header">
+            <h3 id="grade-summary-title" class="modal-title">Grade breakdown by period</h3>
+            <button type="button" class="modal-close" data-modal-close aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-form grade-summary-body">
+            <p class="modal-subtitle">Weighted class standing computed from posted scores and component weights.</p>
+            <div id="grade-summary-content">
+                {% include "partials/grade_summary_content.html" %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/assessments.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,95 @@
+<div class="leave-passes-layout">
+    <div class="card cache-managed" data-cache-refresh="{{ cache_refresh_url }}">
+        <div class="card-header-row">
+            <div>
+                <h2 class="card-title">Leave Passes</h2>
+                <p class="card-subtitle">
+                    {% if mode == 'parent' %}
+                    Parent view (linked guardian account)
+                    {% else %}
+                    Student view (your session)
+                    {% endif %}
+                </p>
+            </div>
+            <a href="/app/parent/add" class="btn btn-secondary btn-sm" data-spa-link>Link parent</a>
+        </div>
+
+        <div class="view-toggle" role="tablist" aria-label="Leave pass view">
+            <a href="/app/leave-passes?mode=student&amp;page=1"
+               class="view-toggle-btn{% if mode == 'student' %} active{% endif %}"
+               role="tab"
+               aria-selected="{{ 'true' if mode == 'student' else 'false' }}"
+               data-spa-link>Student view</a>
+            <a href="/app/leave-passes?mode=parent&amp;page=1{% if active_parent %}&amp;parent={{ active_parent.id }}{% endif %}"
+               class="view-toggle-btn{% if mode == 'parent' %} active{% endif %}"
+               role="tab"
+               aria-selected="{{ 'true' if mode == 'parent' else 'false' }}"
+               data-spa-link>Parent view</a>
+        </div>
+
+        {% if linked %}
+        <div class="alert alert-success">Parent account linked successfully.</div>
+        {% endif %}
+
+        {% if mode == 'parent' %}
+        {% include "partials/parent_account_panel_spa.html" %}
+        {% endif %}
+
+        {% if mode == 'parent' and needs_parent %}
+        <div class="empty-state empty-state-feature">
+            <p>No parent account linked yet.</p>
+            <p class="empty-state-detail">Link a guardian login to use the parent leave pass view.</p>
+            <a href="/app/parent/add" class="btn btn-primary" data-spa-link>Link parent account</a>
+        </div>
+        {% elif data is not none %}
+        {% set lp_base = '/app/leave-passes?mode=' ~ mode ~ ('&parent=' ~ active_parent.id if active_parent else '') %}
+        {% set prev_url = lp_base ~ '&page=' ~ (page - 1) if page > 1 else none %}
+        {% set next_url = lp_base ~ '&page=' ~ (page + 1) if has_next else none %}
+        {% with page=page, prev_url=prev_url, next_url=next_url, spa_link=true %}
+        {% include "partials/pagination.html" %}
+        {% endwith %}
+
+        <div id="leave-pass-list" class="leave-pass-list">
+            {% if data %}
+            {% include "partials/leave_pass_list.html" %}
+            {% else %}
+            <div class="empty-state">
+                <p>No leave passes on this page.</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if mode == 'parent' and active_parent %}
+<div id="approve-return-modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="approve-return-title">
+    <div class="modal-backdrop" data-modal-close></div>
+    <div class="modal-panel">
+        <div class="modal-header">
+            <h3 id="approve-return-title" class="modal-title">Approve return slip</h3>
+            <button type="button" class="modal-close" data-modal-close aria-label="Close">&times;</button>
+        </div>
+        <form method="POST"
+              id="approve-return-form"
+              action="{{ url_for('approve_return', pass_id=0) }}"
+              class="modal-form">
+            <input type="hidden" name="parent_id" value="{{ active_parent.id }}">
+            <input type="hidden" name="page" value="{{ page }}">
+            <p class="modal-subtitle" id="approve-return-student"></p>
+            <div class="form-field">
+                <label for="departure_datetime">Departure from home</label>
+                <input type="datetime-local"
+                       id="departure_datetime"
+                       name="departure_datetime"
+                       required>
+                <p class="field-hint">Only the departure time is edited here. All other pass data is copied from PisayConnect.</p>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Submit approval</button>
+                <button type="button" class="btn btn-ghost" data-modal-close>Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}

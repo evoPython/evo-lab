@@ -1,0 +1,75 @@
+{% for item in data %}
+<article class="post-card{% if item.source == 'bulletin' %} bulletin-card{% endif %}"
+         {% if item.source == 'bulletin' %}data-bulletin-id="{{ item.id }}"{% else %}data-post-id="{{ item.id }}"{% endif %}>
+    <div class="post-header">
+        <div class="post-meta">
+            <p class="post-source">From {{ item.source_label or 'Class Wall' }}</p>
+            {% if item.source == 'bulletin' and item.title %}
+            <h3 class="post-title">{{ item.title | safe }}</h3>
+            {% endif %}
+            {% if item.source == 'bulletin' and item.author %}
+            <p class="post-teacher">{{ item.author | safe }}</p>
+            {% elif item.teacher %}
+            <p class="post-teacher">{{ item.teacher | safe }}</p>
+            {% endif %}
+            <div class="post-date">{{ item.date | safe }}</div>
+        </div>
+        <button type="button"
+                class="btn btn-bookmark bookmarked"
+                data-post-id="{{ item.id }}"
+                data-bookmark-source="{{ item.source }}"
+                aria-pressed="true"
+                onclick="toggleBookmark(this)">
+            <svg class="btn-bookmark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span class="btn-bookmark-label">Bookmarked</span>
+        </button>
+    </div>
+
+    {% if item.images %}
+    <div class="message-image-grid">
+        {% for img in item.images %}
+        <button type="button"
+                class="message-image-thumb"
+                data-lightbox-src="{{ img.src }}"
+                data-lightbox-alt="{{ img.alt }}"
+                aria-label="View image: {{ img.alt }}">
+            <img src="{{ img.src }}" alt="{{ img.alt }}" loading="lazy">
+        </button>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="post-collapsible-content">
+        {% if item.message %}
+        <div class="post-message">{{ item.message | safe }}</div>
+        {% endif %}
+
+        {% if item.attachments %}
+        <div class="attachments">
+            <div class="attachments-title">Attachments ({{ item.attachments|length }})</div>
+            <ul class="attachment-list">
+                {% for file in item.attachments %}
+                <li class="attachment-item">
+                    <a href="{{ url_for('download', file_id=file.id) }}">{{ file.name | safe }}</a>
+                    {% if file.type %}<small>{{ file.type }}</small>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if item.attachments %}
+        <div class="post-actions">
+            <a href="#" class="download-all" onclick="downloadAll(this); return false;"
+               data-files='{{ item.attachments | tojson }}'>Download all</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <button type="button" class="post-toggle btn btn-ghost" hidden aria-expanded="false">
+        See more
+    </button>
+</article>
+{% endfor %}

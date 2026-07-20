@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "app_base.html" %}
 
 {% block title %}Login{% endblock %}
 
@@ -16,8 +16,10 @@
   <form method="post">
     <input type="text" name="username" placeholder="username" required autocomplete="username">
     <input type="password" name="password" placeholder="password" required autocomplete="current-password">
-    <button type="submit" name="action" value="login" class="btn btn--primary">Log in</button>
-    <button type="submit" name="action" value="register" class="btn">Register</button>
+    <div class="btn-row">
+      <button type="submit" name="action" value="login" class="btn btn--primary">Log in</button>
+      <button type="submit" name="action" value="register" class="btn">Register</button>
+    </div>
   </form>
 </div>
 </main>

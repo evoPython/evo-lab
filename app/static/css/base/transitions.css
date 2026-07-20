@@ -1,11 +1,29 @@
 /* ============================================================
-   PAGE TRANSITIONS (home <-> /auth/login)
-   ============================================================ */
+   PAGE TRANSITIONS
+   ============================================================
+   Two different things live here:
+
+   1. The home <-> /auth/login handoff (JS-driven, see script.js
+      initPageTransitions): a real domain switch between the home
+      SPA and the app shell, worth a deliberate fade.
+
+   2. Every OTHER navigation in the app shell (dashboard, remote,
+      tools, clipboard, inbox...) is a plain <a href> full page
+      load between app_base.html pages. That used to ALSO get this
+      body-level fade-in, stacked on top of .app-content's own
+      fade-in (app-shell.css) — two overlapping animations firing
+      on every single tap, which read as a blink/flicker instead
+      of motion. `.app-body` pages now skip the body-level fade
+      entirely and rely only on .app-content's single, fast
+      transition below. */
 body {
   animation: page-fade-in 0.32s ease both;
 }
 body.is-leaving {
-  animation: page-fade-out 0.22s ease both;
+  animation: page-fade-out 0.15s ease both;
+}
+.app-body:not(.is-leaving) {
+  animation: none;
 }
 @keyframes page-fade-in {
   from { opacity: 0; }
@@ -14,7 +32,4 @@ body.is-leaving {
 @keyframes page-fade-out {
   from { opacity: 1; }
   to   { opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  body, body.is-leaving { animation: none; }
 }

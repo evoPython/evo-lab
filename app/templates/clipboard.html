@@ -1,25 +1,79 @@
-{% extends "base.html" %}
+{% extends "app_base.html" %}
 
 {% block title %}Clipboard{% endblock %}
 
 {% block content %}
 <main class="stage" id="stage">
 <div class="page-shell">
+  <a class="back-link mono" href="/tools">&larr; back to tools</a>
   <h1>Clipboard Sync</h1>
+  <p class="clip-sub">Move text between this device and the laptop, both ways.</p>
 
   {% if message %}
-  <p>{{ message }}</p>
+  <div class="clip-flash mono" id="clip-flash">{{ message }}</div>
   {% endif %}
 
-  <p>Current laptop clipboard: {{ current_text if current_text else "(empty or unavailable)" }}</p>
+  <section class="clip-card">
+    <div class="clip-card__head">
+      <h2>Laptop &rarr; this device</h2>
+      <button type="button" class="btn btn--sm" id="copy-btn" onclick="copyCurrent()" {% if not current_text %}disabled{% endif %}>Copy</button>
+    </div>
+    {% if current_text %}
+    <div class="clip-current mono" id="clip-current">{{ current_text }}</div>
+    {% else %}
+    <div class="clip-current clip-current--empty mono" id="clip-current">(empty or unavailable)</div>
+    {% endif %}
+  </section>
 
-  <form method="post">
-    <textarea name="text" rows="4" cols="50">{{ current_text or "" }}</textarea>
-    <br>
-    <button type="submit" class="btn">Send to Laptop</button>
-  </form>
-
-  <p><a href="/tools">Back to tools</a></p>
+  <section class="clip-card">
+    <div class="clip-card__head">
+      <h2>This device &rarr; laptop</h2>
+      <span class="clip-count mono" id="clip-count">0</span>
+    </div>
+    <form method="post" id="clip-form">
+      <textarea name="text" id="clip-text" class="clip-textarea" rows="5" placeholder="type or paste text to send…">{{ current_text or "" }}</textarea>
+      <div class="btn-row clip-actions">
+        <button type="submit" class="btn btn--primary">Send to laptop</button>
+        <button type="button" class="btn btn--ghost" onclick="clearText()">Clear</button>
+      </div>
+    </form>
+  </section>
 </div>
 </main>
+
+<script>
+  function updateCount() {
+    var el = document.getElementById('clip-text');
+    document.getElementById('clip-count').textContent = el.value.length;
+  }
+  function clearText() {
+    var el = document.getElementById('clip-text');
+    el.value = '';
+    updateCount();
+    el.focus();
+  }
+  async function copyCurrent() {
+    var textEl = document.getElementById('clip-current');
+    var btn = document.getElementById('copy-btn');
+    if (btn.disabled) return;
+    try {
+      await navigator.clipboard.writeText(textEl.textContent);
+      btn.textContent = 'Copied!';
+      btn.classList.add('is-active');
+    } catch (e) {
+      btn.textContent = 'Copy failed';
+    }
+    setTimeout(function () {
+      btn.textContent = 'Copy';
+      btn.classList.remove('is-active');
+    }, 1600);
+  }
+  document.getElementById('clip-text').addEventListener('input', updateCount);
+  updateCount();
+
+  var flash = document.getElementById('clip-flash');
+  if (flash) {
+    setTimeout(function () { flash.classList.add('is-hiding'); }, 2400);
+  }
+</script>
 {% endblock %}

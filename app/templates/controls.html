@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "app_base.html" %}
 
 {% block title %}Controls{% endblock %}
 
@@ -7,23 +7,14 @@
 <div class="page-shell">
   <h1>Laptop Controls</h1>
 
-  <p id="status"></p>
+  <p class="rc-status mono is-visible" id="status"></p>
 
-  <p>
-  <button onclick="runAction('lock')">Lock Screen</button>
-  </p>
-
-  <p>
-  <button onclick="confirmAction('sleep', 'Suspend the laptop now?')">Sleep</button>
-  </p>
-
-  <p>
-  <button onclick="confirmAction('restart', 'Restart the laptop now?')">Restart</button>
-  </p>
-
-  <p>
-  <button onclick="confirmAction('shutdown', 'Shut down the laptop now?')">Shutdown</button>
-  </p>
+  <div class="btn-row">
+    <button class="btn" onclick="runAction('lock')">Lock Screen</button>
+    <button class="btn" onclick="confirmAction('sleep', 'Suspend the laptop now?')">Sleep</button>
+    <button class="btn btn--danger" onclick="confirmAction('restart', 'Restart the laptop now?')">Restart</button>
+    <button class="btn btn--danger" onclick="confirmAction('shutdown', 'Shut down the laptop now?')">Shutdown</button>
+  </div>
 
   <script>
 function setStatus(message) {

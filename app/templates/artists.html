@@ -1,0 +1,177 @@
+{% extends "app_base.html" %}
+
+{% block title %}Music &middot; Artists{% endblock %}
+
+{% block content %}
+<main class="stage" id="stage">
+<div class="page-shell music-shell">
+  <a class="back-link mono" href="/media/music">&larr; back to music</a>
+  <h1 class="mono" id="artists-heading">artists</h1>
+  <p class="dim" id="artists-sub">every unique artist in your library, as its own playlist.</p>
+
+  <section class="music-section">
+    <div class="music-section__head">
+      <h2 class="h2" style="margin:0;" id="artists-section-title">all artists</h2>
+      <button class="btn btn--sm btn--ghost" onclick="loadLibrary()">Refresh</button>
+    </div>
+    <div class="music-list" id="artists-list">
+      <p class="filelist__empty">Loading library&hellip;</p>
+    </div>
+  </section>
+</div>
+<div class="music-scroll-spacer" aria-hidden="true"></div>
+<div class="music-toasts" id="music-toasts" aria-live="polite"></div>
+
+{% include "_player_bar.html" %}
+
+<script>
+// This page reuses the shared window.library / loadLibrary / playTrack
+// API owned by static/js/music-player.js (loaded via _player_bar.html
+// above) rather than duplicating any playback logic — see music.html
+// for the fuller library view this is modeled on.
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function fmtTime(sec) {
+  if (sec == null || isNaN(sec)) return '0:00';
+  sec = Math.max(0, Math.floor(sec));
+  const m = Math.floor(sec / 60);
+  const s = String(sec % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+// "Good Kid" + "Cicada" -> "Good Kid - Cicada" for the bold title line.
+function displayTitle(title, uploader) {
+  return uploader ? `${uploader} - ${title}` : title;
+}
+
+function toast(message, type = '') {
+  const wrap = document.getElementById('music-toasts');
+  const el = document.createElement('div');
+  el.className = 'music-toast' + (type ? ` music-toast--${type}` : '');
+  el.textContent = message;
+  wrap.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('is-leaving');
+    setTimeout(() => el.remove(), 200);
+  }, 2400);
+}
+
+let currentArtist = new URLSearchParams(location.search).get('artist') || null;
+let playingFilename = null;
+
+function uniqueArtists(tracks) {
+  const counts = new Map();
+  for (const t of (tracks || [])) {
+    const name = (t.uploader || '').trim();
+    if (!name) continue;
+    counts.set(name, (counts.get(name) || 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+}
+
+function renderArtists() {
+  if (currentArtist) {
+    renderArtistDetail(currentArtist);
+  } else {
+    renderArtistList();
+  }
+}
+
+function renderArtistList() {
+  document.getElementById('artists-heading').textContent = 'artists';
+  document.getElementById('artists-sub').textContent = 'every unique artist in your library, as its own playlist.';
+  document.getElementById('artists-section-title').textContent = 'all artists';
+
+  const artists = uniqueArtists(window.library);
+  const el = document.getElementById('artists-list');
+  el.innerHTML = artists.length
+    ? artists.map(a => `
+      <a class="music-row" href="?artist=${encodeURIComponent(a.name)}" style="text-decoration:none;">
+        <div class="music-row__info">
+          <span class="music-row__title">${escapeHtml(a.name)}</span>
+          <span class="music-row__meta">${a.count} song${a.count === 1 ? '' : 's'}</span>
+        </div>
+      </a>
+    `).join('')
+    : '<p class="filelist__empty">No artist info yet &mdash; download a few songs first.</p>';
+}
+
+function renderArtistDetail(name) {
+  const tracks = (window.library || [])
+    .filter(t => (t.uploader || '').trim() === name)
+    .sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
+
+  document.getElementById('artists-heading').textContent = name;
+  document.getElementById('artists-sub').innerHTML = '<a href="/media/music/artists" class="mono">&larr; all artists</a>';
+  document.getElementById('artists-section-title').textContent = `${tracks.length} song${tracks.length === 1 ? '' : 's'}`;
+
+  const el = document.getElementById('artists-list');
+  el.innerHTML = tracks.length
+    ? tracks.map(t => `
+      <div class="music-row${t.filename === playingFilename ? ' is-playing' : ''}">
+        <div class="music-row__info">
+          <span class="music-row__title">${escapeHtml(displayTitle(t.title, t.uploader))}</span>
+          <span class="music-row__meta mono">${fmtTime(t.duration)}</span>
+        </div>
+        <div class="music-row__actions">
+          <button class="btn btn--sm" data-action="play" data-filename="${escapeHtml(t.filename)}" data-title="${escapeHtml(t.title)}" data-uploader="${escapeHtml(t.uploader || '')}">Play</button>
+        </div>
+      </div>
+    `).join('')
+    : '<p class="filelist__empty">No songs found for this artist.</p>';
+}
+
+document.getElementById('artists-list').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-action="play"]');
+  if (!btn) return;
+  const { filename, title, uploader } = btn.dataset;
+  playTrack(filename, title, uploader);
+  playingFilename = filename;
+  toast(`Playing "${title}".`);
+  renderArtists();
+});
+
+// Keep the highlight in sync with whatever's actually playing (auto-
+// advance, another device, etc.), same approach as the library view.
+async function syncPlayingFromServer() {
+  try {
+    const res = await fetch('/media/music/api/now_playing');
+    const data = await res.json();
+    playingFilename = (data.source === 'music-tool' && data.filename) ? data.filename : null;
+  } catch (err) {
+    // Transient network error — leave the highlight as-is and try again next tick.
+  }
+}
+
+async function tickPlayingSync() {
+  if (document.hidden) return; // tab backgrounded — skip this request entirely
+  const prev = playingFilename;
+  await syncPlayingFromServer();
+  if (playingFilename !== prev) renderArtists();
+}
+
+let didSyncPlayingOnLoad = false;
+window.onLibraryLoaded = function() {
+  if (!didSyncPlayingOnLoad) {
+    didSyncPlayingOnLoad = true;
+    syncPlayingFromServer().then(renderArtists);
+    setInterval(tickPlayingSync, 4000);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) tickPlayingSync();
+    });
+    return;
+  }
+  renderArtists();
+};
+</script>
+{% endblock %}

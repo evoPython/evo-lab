@@ -18,9 +18,24 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Styles: base tokens/reset first, then every app-shell stylesheet.
+       Linked directly (not through style.css's @import chain) so they
+       load in parallel and every page gets the same, complete set. -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base/variables.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base/reset.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base/transitions.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app/app-shell.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/app-nav.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/buttons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/page-shell.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/auth.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/tools.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/remote-dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/cross-remote.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/inbox.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/clipboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/music-tool.css') }}">
 </head>
 <body class="app-body">
   <a class="skip-link" href="#stage">skip to content</a>
@@ -41,6 +56,7 @@
       <a href="/letters/inbox" class="app-sidebar__item {% if request.path.startswith('/letters') %}app-sidebar__item--active{% endif %}">
         Inbox{% if unread_letters %}<span class="app-sidebar__badge">{{ unread_letters }}</span>{% endif %}
       </a>
+      <a href="/pisayconnect" class="app-sidebar__item {% if request.path.startswith('/pisayconnect') %}app-sidebar__item--active{% endif %}">PisayConnect</a>
       {% endif %}
       {% if is_logged_in or is_personal %}
       <a href="/cross-remote" class="app-sidebar__item {% if request.path.startswith('/cross-remote') %}app-sidebar__item--active{% endif %}">Cross-Remote</a>

@@ -1,24 +1,26 @@
-{% extends "base.html" %}
+{% extends "app_base.html" %}
 
 {% block title %}Niri{% endblock %}
 
 {% block content %}
 <main class="stage" id="stage">
-<div class="page-shell">
+<div class="page-shell dash-shell">
   <h1>Niri Layout</h1>
 
-  <p id="status"></p>
-  <p id="overview-state"></p>
+  <p class="rc-status mono is-visible" id="status"></p>
+  <p class="dim" id="overview-state"></p>
 
   <h2 class="h2">Screen</h2>
-  <div id="screen-wrap" style="position:relative; display:inline-block;">
-    <img id="screenshot" src="/niri/screenshot" style="max-width:500px; display:block;">
-    <div id="viewport-outline" style="position:absolute; border:2px solid red; pointer-events:none;"></div>
+  <div class="rc-screen-wrap" id="screen-wrap">
+    <img id="screenshot" src="/niri/screenshot">
+    <div id="viewport-outline" class="rc-viewport-outline"></div>
   </div>
-  <p><button onclick="refreshScreenshot()">Refresh screenshot</button></p>
+  <div class="btn-row" style="margin: 12px 0;">
+    <button class="btn" onclick="refreshScreenshot()">Refresh screenshot</button>
+  </div>
 
   <h2 class="h2">Workspaces</h2>
-  <div id="workspaces" style="display:flex; gap:20px;"></div>
+  <div id="workspaces" class="rc-ws-row"></div>
 
   <script>
 const SCALE = 0.15;
@@ -47,18 +49,14 @@ async function sendAction(action, window_id, workspace_idx) {
   }
 }
 
-function makeWindowBox(win) {
+function makeWindowBox(win, wsIdx) {
   const box = document.createElement("div");
+  box.className = "rc-win-box" + (win.is_focused ? " is-focused" : "") + (win.is_floating ? " is-floating" : "");
   box.textContent = (win.app_id || "?") + ": " + (win.title || "");
   box.title = "id " + win.id;
   box.draggable = true;
-  box.style.border = win.is_focused ? "2px solid green" : "1px solid black";
-  box.style.width = Math.max(40, win.layout.tile_size[0] * SCALE) + "px";
-  box.style.height = Math.max(30, win.layout.tile_size[1] * SCALE) + "px";
-  box.style.overflow = "hidden";
-  box.style.fontSize = "11px";
-  box.style.padding = "2px";
-  box.style.background = win.is_floating ? "#eee" : "#fff";
+  box.style.width = Math.max(70, win.layout.tile_size[0] * SCALE) + "px";
+  box.style.height = Math.max(40, win.layout.tile_size[1] * SCALE) + "px";
 
   box.addEventListener("dragstart", (e) => {
     e.dataTransfer.setData("text/plain", win.id);
@@ -71,25 +69,20 @@ function makeWindowBox(win) {
 
 function makeWorkspaceColumn(ws, windows) {
   const col = document.createElement("div");
-  col.style.border = ws.is_active ? "2px solid blue" : "1px solid gray";
-  col.style.minWidth = "220px";
-  col.style.minHeight = "300px";
-  col.style.padding = "6px";
+  col.className = "rc-ws-col" + (ws.is_active ? " is-active" : "");
 
   const header = document.createElement("div");
-  header.textContent = "Workspace " + ws.idx + (ws.is_focused ? " (focused)" : "");
+  header.className = "rc-ws-col__head mono";
+  header.textContent = "workspace " + ws.idx + (ws.is_focused ? " · focused" : "");
   col.appendChild(header);
 
   const winWrap = document.createElement("div");
-  winWrap.style.display = "flex";
-  winWrap.style.flexWrap = "wrap";
-  winWrap.style.gap = "4px";
-  winWrap.style.marginTop = "6px";
+  winWrap.className = "rc-ws-wins";
 
   windows
     .filter(w => w.workspace_id === ws.id)
     .sort((a, b) => a.layout.pos_in_scrolling_layout[0] - b.layout.pos_in_scrolling_layout[0])
-    .forEach(w => winWrap.appendChild(makeWindowBox(w)));
+    .forEach(w => winWrap.appendChild(makeWindowBox(w, ws.idx)));
 
   col.appendChild(winWrap);
 

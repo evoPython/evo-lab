@@ -64,7 +64,7 @@ def api_public_stats():
         "net_sent_bps": stats["network"]["sent_rate_bps"],
         "net_recv_bps": stats["network"]["recv_rate_bps"],
         "processes": stats["processes"],
-        "uptime": stats["uptime"],
+        "uptime": stats["uptime"]["text"],
         # Just the mode name — no detail about *why* it's in that mode,
         # what units it stopped, battery thresholds, etc. Those stay
         # behind /modes/api/state (auth-gated). This is what drives the
@@ -81,17 +81,20 @@ def api_battery_history():
 
     `hours` accepts fractions (0.5 for the 30m range). Resolution
     scales down as the window grows so the payload stays small: the
-    30m/1h views get ~1 point per logged minute, the 1d view buckets
-    to ~15 minutes, the 1w view buckets to ~1 hour.
+    30m/1h views get ~1 point per logged 30s sample, the 1d view
+    buckets to ~15 minutes, the 1w view buckets to ~1 hour, and the
+    1month view buckets to ~4 hours.
     """
     hours = request.args.get("hours", default=1, type=float)
-    hours = max(1 / 60, min(hours, 24 * 7))
+    hours = max(1 / 60, min(hours, 24 * 31))
 
     if hours <= 1:
-        max_points = 60
+        max_points = 120
     elif hours <= 24:
         max_points = 96
-    else:
+    elif hours <= 24 * 7:
         max_points = 168
+    else:
+        max_points = 186
 
     return jsonify(get_battery_history(hours=hours, max_points=max_points))

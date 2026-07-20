@@ -1,0 +1,32 @@
+<div class="card cache-managed" data-cache-refresh="{{ cache_refresh_url }}">
+    <div class="card-header-row card-header-row-assessments">
+        <div>
+            {% if show_archived %}
+            <h2 class="card-title">Archived Classes</h2>
+            <p class="card-subtitle">Subjects you have archived. They are hidden from the main assessments list.</p>
+            {% else %}
+            <h2 class="card-title">Assessments</h2>
+            <p class="card-subtitle">Your enrolled subjects and assessment progress for the current school year.</p>
+            {% endif %}
+        </div>
+        {% set year_suffix = ('?schoolYear=' ~ selected_school_year) if selected_school_year else '' %}
+        {% if show_archived %}
+        <a href="/app/assessments{{ year_suffix }}" class="assessment-archived-link" data-spa-link>Active subjects</a>
+        {% elif has_archived %}
+        <a href="/app/assessments?archived=1{{ ('&schoolYear=' ~ selected_school_year) if selected_school_year else '' }}" class="assessment-archived-link" data-spa-link>Archived Classes</a>
+        {% endif %}
+        {% with view="assessments", school_years=school_years, selected_school_year=selected_school_year %}
+        {% include "partials/school_year_select.html" %}
+        {% endwith %}
+    </div>
+
+    <div id="assessment-class-list" class="assessment-class-list{% if show_archived %} is-archived{% endif %}">
+        {% if data %}
+        {% include "partials/assessment_class_list.html" %}
+        {% else %}
+        <div class="empty-state">
+            <p>{% if show_archived %}No archived subjects yet.{% else %}No enrolled subjects found.{% endif %}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
