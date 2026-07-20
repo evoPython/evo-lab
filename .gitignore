@@ -21,8 +21,10 @@ Thumbs.db
 # Logs
 *.log
 
-# Uploaded files (future)
-uploads/
-
 # Database files (future)
 *.db
+
+# Uploaded files (never commit user data)
+data/uploads/*
+!data/uploads/.gitkeep
+data/*.db
