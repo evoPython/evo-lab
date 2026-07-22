@@ -4,3 +4,6 @@ werkzeug
 python-dotenv
 pyperclip
 pyxdg
+requests
+yt-dlp
+mutagen

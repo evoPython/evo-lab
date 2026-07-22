@@ -42,6 +42,7 @@
       </div>
     </details>
 
+    
     <details class="rc-group" open>
       <summary class="rc-group__summary">
         <span class="rc-group__icon" aria-hidden="true">&#9834;</span>
@@ -183,6 +184,40 @@
               <img id="laptop-cam-img" style="display:none; max-width:260px;">
               <audio id="laptop-mic-audio" controls style="display:none;"></audio>
             </div>
+          </section>
+        </div>
+      </div>
+    </details>
+
+    <details class="rc-group">
+      <summary class="rc-group__summary">
+        <span class="rc-group__icon" aria-hidden="true">&#8776;</span>
+        <span class="rc-group__chevron"></span>
+        <span class="rc-group__title">Network</span>
+        <span class="rc-group__hint">wifi &middot; hotspot fallback for LAN access</span>
+      </summary>
+      <div class="rc-group__body">
+        <div class="rc-grid">
+          <section class="rc-panel rc-panel--span3">
+            <div class="rc-panel__headrow">
+              <h2>Status</h2>
+              <label class="rc-check"><input type="checkbox" id="net-auto" checked onchange="setNetAuto()"> Auto hotspot fallback</label>
+            </div>
+            <p class="rc-panel__value" id="net-status">&mdash;</p>
+            <div class="rc-btnrow">
+              <button class="btn" onclick="refreshNetStatus()">Refresh</button>
+              <button class="btn" onclick="runAction('/network/hotspot/on'); setTimeout(refreshNetStatus,1500)">Force hotspot</button>
+              <button class="btn" onclick="runAction('/network/hotspot/off'); setTimeout(refreshNetStatus,1500)">Stop hotspot</button>
+              <button class="btn btn--primary" onclick="quickConnectPriority()">Connect to pisay2</button>
+            </div>
+          </section>
+
+          <section class="rc-panel rc-panel--span3">
+            <div class="rc-panel__headrow">
+              <h2>Scan</h2>
+              <button class="btn btn--sm" onclick="scanNetworks()">Scan</button>
+            </div>
+            <ul id="net-list" class="rc-applist mono"></ul>
           </section>
         </div>
       </div>
@@ -781,6 +816,79 @@ async function loadState() {
   }
 }
 
+// --- Network ---
+function connIcon(status) {
+  if (status.is_hotspot) return "hotspot (LAN only, no password)";
+  if (status.connectivity === "full") return "online";
+  if (status.connectivity === "none") return "no internet";
+  return status.connectivity || "unknown";
+}
+
+async function refreshNetStatus() {
+  const el = document.getElementById("net-status");
+  try {
+    const res = await fetch("/network/status");
+    const data = await res.json();
+    if (data.error) { el.textContent = "Error: " + data.error; return; }
+    document.getElementById("net-auto").checked = !!data.auto_enabled;
+    el.textContent =
+      (data.is_hotspot ? "Hotspot: " + data.hotspot_ssid : (data.active_connection || "disconnected")) +
+      " \u00b7 " + connIcon(data) +
+      (data.ip4 ? " \u00b7 " + data.ip4 : "");
+  } catch (e) {
+    el.textContent = "Failed to load network status.";
+  }
+}
+
+async function scanNetworks() {
+  const list = document.getElementById("net-list");
+  list.innerHTML = "<li>scanning\u2026</li>";
+  try {
+    const res = await fetch("/network/scan");
+    const data = await res.json();
+    if (data.error) { list.innerHTML = "<li>" + data.error + "</li>"; return; }
+    list.innerHTML = "";
+    data.networks.forEach(n => {
+      const li = document.createElement("li");
+      li.style.display = "flex";
+      li.style.justifyContent = "space-between";
+      li.style.alignItems = "center";
+      li.style.gap = "8px";
+      const label = document.createElement("span");
+      label.textContent = (n.in_use ? "\u25cf " : "\u25cb ") + n.ssid + " (" + n.signal + "%" + (n.secure ? ", secured" : ", open") + ")";
+      const btn = document.createElement("button");
+      btn.className = "btn btn--sm";
+      btn.textContent = "Connect";
+      btn.onclick = () => connectToNetwork(n.ssid, n.secure);
+      li.appendChild(label);
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+  } catch (e) {
+    list.innerHTML = "<li>Scan failed.</li>";
+  }
+}
+
+function connectToNetwork(ssid, secure) {
+  let password = null;
+  if (secure) {
+    password = window.prompt("Password for " + ssid + ":");
+    if (password === null) return;
+  }
+  runAction("/network/connect", { ssid, password });
+  setTimeout(refreshNetStatus, 2000);
+}
+
+function quickConnectPriority() {
+  runAction("/network/connect/priority");
+  setTimeout(refreshNetStatus, 9000);
+}
+
+function setNetAuto() {
+  const enabled = document.getElementById("net-auto").checked;
+  postJSON("/network/auto", { enabled });
+}
+
 document.getElementById("screenshot").addEventListener("load", () => updateViewportOutline);
 updateStreamStatus();
 loadApps();
@@ -789,8 +897,10 @@ loadBrightness();
 loadMedia();
 loadLibrary();
 loadState();
+refreshNetStatus();
 setInterval(loadState, 4000);
 setInterval(loadMedia, 2000);
+setInterval(refreshNetStatus, 10000);
   </script>
 </div>
 </main>

@@ -1,0 +1,384 @@
+{% extends "app_base.html" %}
+
+{% block title %}Site Management{% endblock %}
+
+{% block content %}
+<main class="stage" id="stage">
+<div class="page-shell dash-shell">
+  <h1 class="mono">site management</h1>
+
+  <div class="mgmt-stats">
+    <div class="mgmt-stat">
+      <span class="mgmt-stat__value" id="statOnlineCount">{{ online|length }}</span>
+      <span class="mgmt-stat__label">online now</span>
+    </div>
+    <div class="mgmt-stat">
+      <span class="mgmt-stat__value">{{ visitors|length }}</span>
+      <span class="mgmt-stat__label">visitors</span>
+    </div>
+    <div class="mgmt-stat">
+      <span class="mgmt-stat__value">{{ letters|length }}</span>
+      <span class="mgmt-stat__label">letters</span>
+    </div>
+  </div>
+
+  <div class="mgmt-tabs" role="tablist">
+    <button type="button" class="mgmt-tab is-active" data-tab="status" role="tab">status</button>
+    <button type="button" class="mgmt-tab" data-tab="online" role="tab">
+      online now <span class="mgmt-tab__badge" id="onlineTabBadge">{{ online|length }}</span>
+    </button>
+    <button type="button" class="mgmt-tab" data-tab="schedule" role="tab">class schedule</button>
+    <button type="button" class="mgmt-tab" data-tab="visitors" role="tab">visitors</button>
+    <button type="button" class="mgmt-tab" data-tab="letters" role="tab">
+      letters{% if unread_letters %} <span class="mgmt-tab__badge">{{ unread_letters }}</span>{% endif %}
+    </button>
+  </div>
+
+  <!-- STATUS -->
+  <section class="mgmt-panel is-active" data-panel="status">
+    <div class="mgmt-card">
+      <h2>my status</h2>
+      <div class="status-current">
+        <span class="status-icon status-icon--{{ status_mode }}" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <circle class="ico-online" cx="12" cy="12" r="9"></circle>
+            <circle class="ico-idle-base" cx="12" cy="12" r="9"></circle>
+            <circle class="ico-idle-cut" cx="8.4" cy="8.4" r="7"></circle>
+            <circle class="ico-offline" cx="12" cy="12" r="8"></circle>
+          </svg>
+        </span>
+        <span class="status-current__text">{{ status_text }}</span>
+        {% if status_updated %}<span class="dim">· updated {{ status_updated }}</span>{% endif %}
+      </div>
+      <form method="post" action="/management/status">
+        <div class="status-picker">
+          {% for m in status_modes %}
+          <label class="status-option {% if m == status_mode %}is-checked{% endif %}">
+            <input type="radio" name="mode" value="{{ m }}" {% if m == status_mode %}checked{% endif %}>
+            <span class="status-icon status-icon--{{ m }}" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <circle class="ico-online" cx="12" cy="12" r="9"></circle>
+                <circle class="ico-idle-base" cx="12" cy="12" r="9"></circle>
+                <circle class="ico-idle-cut" cx="8.4" cy="8.4" r="7"></circle>
+                <circle class="ico-offline" cx="12" cy="12" r="8"></circle>
+              </svg>
+            </span>
+            <span>{{ m }}</span>
+          </label>
+          {% endfor %}
+        </div>
+        <div class="mgmt-field-row">
+          <input type="text" name="status" placeholder="e.g. asleep, at school, around" maxlength="120" required value="{{ status_text }}">
+          <button type="submit" class="btn btn--primary">Update status</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- CLASS SCHEDULE (shown on the public home page, #about) -->
+  <section class="mgmt-panel" data-panel="schedule">
+    <div class="mgmt-card">
+      <h2>holiday</h2>
+      <form method="post" action="/management/schedule/holiday">
+        <label class="mgmt-toggle">
+          <input type="checkbox" name="holiday" value="on" {% if schedule_holiday %}checked{% endif %} onchange="this.form.submit()">
+          <span class="mgmt-toggle__track" aria-hidden="true"><span class="mgmt-toggle__thumb"></span></span>
+          <span class="mgmt-toggle__label">Toggle ON to show "HOLIDAY" on the home page instead of the normal schedule</span>
+        </label>
+      </form>
+    </div>
+
+    <div class="mgmt-card">
+      <h2>my class schedule</h2>
+      {% if schedule_updated %}<p class="dim">updated {{ schedule_updated }}</p>{% endif %}
+      <form method="post" action="/management/schedule">
+        <div class="mgmt-schedule-scroll">
+          <table class="mgmt-schedule-table">
+            <thead>
+              <tr>
+                <th class="mgmt-schedule-table__time">start</th>
+                <th class="mgmt-schedule-table__time">end</th>
+                {% for d in schedule_days %}<th>{{ d }}</th>{% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in schedule_periods %}
+              {% set pi = loop.index0 %}
+              <tr>
+                <td class="mgmt-schedule-table__time"><input type="text" name="start_{{ pi }}" value="{{ p.start }}"></td>
+                <td class="mgmt-schedule-table__time"><input type="text" name="end_{{ pi }}" value="{{ p.end }}"></td>
+                {% for d in schedule_days %}
+                {% set cell = p.classes[loop.index0] %}
+                <td><input type="text" name="day_{{ pi }}_{{ loop.index0 }}" value="{{ cell }}" placeholder="Blank" {% if cell and cell.strip().lower() in ['blank', 'none'] %}class="is-blank"{% endif %}></td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="mgmt-schedule-hint dim">scroll sideways on small screens · empty-looking cells are marked "Blank" — click one to see it</p>
+        <div class="mgmt-field-row">
+          <button type="submit" class="btn btn--primary">Save schedule</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ONLINE NOW (anyone currently on the site — logged in or not) -->
+  <section class="mgmt-panel" data-panel="online">
+    <div class="mgmt-card">
+      <h2>online now</h2>
+      <ul class="letterlist" id="onlineList">
+        {% for o in online %}
+        <li class="letterlist__item" data-key="{{ o.key }}">
+          <div class="letterlist__meta mono">
+            <span class="letterlist__from">{{ o.label if o.kind == 'user' else o.label[:8] }}</span>
+            {% if o.kind == 'user' %}<span class="dim">· logged in</span>{% endif %}
+            <span class="dim">·</span>
+            <span class="dim">on {{ o.path }}</span>
+          </div>
+          <details class="letterlist__device-details">
+            <summary class="letterlist__device-toggle mono dim">details</summary>
+            <dl class="letterlist__device mono dim">
+              <div class="letterlist__device-row"><dt>page</dt><dd>{{ o.path }}</dd></div>
+              {% if o.ip %}<div class="letterlist__device-row"><dt>ip</dt><dd>{{ o.ip }}</dd></div>{% endif %}
+              {% if o.visitor_id %}<div class="letterlist__device-row"><dt>visitor id</dt><dd>{{ o.visitor_id }}</dd></div>{% endif %}
+              {% if o.user_agent %}<div class="letterlist__device-row"><dt>user agent</dt><dd>{{ o.user_agent }}</dd></div>{% endif %}
+              <div class="letterlist__device-row"><dt>last seen</dt><dd>{{ o.last_seen }}</dd></div>
+            </dl>
+          </details>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if not online %}<p class="mgmt-empty" id="onlineEmpty">No one online right now.</p>{% endif %}
+    </div>
+  </section>
+
+  <!-- SITE VISITORS -->
+  <section class="mgmt-panel" data-panel="visitors">
+    <div class="mgmt-card">
+      <h2>visitors</h2>
+      <p class="dim">{{ visitors|length }} visitor{{ '' if visitors|length == 1 else 's' }} recorded</p>
+      {% if visitors %}
+      <ul class="letterlist">
+        {% for v in visitors %}
+        <li class="letterlist__item">
+          <div class="letterlist__meta mono">
+            <span class="letterlist__from" title="{{ v.id }}">{{ v.id[:8] }}</span>
+            <span class="dim">·</span>
+            <span class="dim">last seen {{ v.last_seen }}</span>
+            <span class="dim">·</span>
+            <span class="dim">{{ v.letters_sent }} letter{{ '' if v.letters_sent == 1 else 's' }}</span>
+          </div>
+          <details class="letterlist__device-details">
+            <summary class="letterlist__device-toggle mono dim">details</summary>
+            <dl class="letterlist__device mono dim">
+              <div class="letterlist__device-row"><dt>visitor id</dt><dd>{{ v.id }}</dd></div>
+              {% if v.last_ip %}<div class="letterlist__device-row"><dt>ip</dt><dd>{{ v.last_ip }}</dd></div>{% endif %}
+              <div class="letterlist__device-row"><dt>first seen</dt><dd>{{ v.first_seen }}</dd></div>
+              {% if v.platform %}<div class="letterlist__device-row"><dt>platform</dt><dd>{{ v.platform }}</dd></div>{% endif %}
+              {% if v.screen %}<div class="letterlist__device-row"><dt>screen</dt><dd>{{ v.screen }}</dd></div>{% endif %}
+              {% if v.language %}<div class="letterlist__device-row"><dt>language</dt><dd>{{ v.language }}</dd></div>{% endif %}
+              {% if v.timezone %}<div class="letterlist__device-row"><dt>timezone</dt><dd>{{ v.timezone }}</dd></div>{% endif %}
+              {% if v.user_agent %}<div class="letterlist__device-row"><dt>user agent</dt><dd>{{ v.user_agent }}</dd></div>{% endif %}
+            </dl>
+          </details>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="mgmt-empty">No visitors recorded yet.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- LETTERS -->
+  <section class="mgmt-panel" data-panel="letters">
+    <div class="mgmt-card">
+      <h2>letters</h2>
+      <p class="dim">{{ letters|length }} letter{{ '' if letters|length == 1 else 's' }} total</p>
+
+      {% if letters %}
+      <ul class="letterlist">
+        {% for l in letters %}
+        <li class="letterlist__item">
+          <button type="submit" form="letter-delete-{{ l.id }}" class="letterlist__delete" aria-label="delete letter from {{ l.name or 'anonymous' }}">×</button>
+          <div class="letterlist__meta mono">
+            <span class="letterlist__from">{{ l.name or 'anonymous' }}</span>
+            <span class="dim">·</span>
+            <span class="letterlist__date dim">{{ l.created_at }}</span>
+          </div>
+          <p class="letterlist__body">{{ l.body }}</p>
+          {% if l.ip or l.visitor_id %}
+          <details class="letterlist__device-details">
+            <summary class="letterlist__device-toggle mono dim">
+              details
+              {% if l.visitor_letters_sent and l.visitor_letters_sent > 1 %}<span class="letterlist__device-badge">{{ l.visitor_letters_sent }}×</span>{% endif %}
+            </summary>
+            <dl class="letterlist__device mono dim">
+              {% if l.ip %}
+              <div class="letterlist__device-row"><dt>ip</dt><dd>{{ l.ip }}</dd></div>
+              {% endif %}
+              {% if l.visitor_id %}
+              <div class="letterlist__device-row"><dt>visitor</dt><dd title="{{ l.visitor_id }}">{{ l.visitor_id[:8] }}</dd></div>
+              {% endif %}
+              {% if l.visitor_platform %}
+              <div class="letterlist__device-row"><dt>platform</dt><dd>{{ l.visitor_platform }}</dd></div>
+              {% endif %}
+              {% if l.visitor_screen %}
+              <div class="letterlist__device-row"><dt>screen</dt><dd>{{ l.visitor_screen }}</dd></div>
+              {% endif %}
+              {% if l.visitor_language %}
+              <div class="letterlist__device-row"><dt>language</dt><dd>{{ l.visitor_language }}</dd></div>
+              {% endif %}
+              {% if l.visitor_timezone %}
+              <div class="letterlist__device-row"><dt>timezone</dt><dd>{{ l.visitor_timezone }}</dd></div>
+              {% endif %}
+              {% if l.visitor_user_agent %}
+              <div class="letterlist__device-row"><dt>user agent</dt><dd>{{ l.visitor_user_agent }}</dd></div>
+              {% endif %}
+            </dl>
+          </details>
+          {% endif %}
+          <form method="post" action="/management/letters/{{ l.id }}/delete" class="letterlist__delete-form" id="letter-delete-{{ l.id }}" onsubmit="return confirm('delete this letter?');"></form>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="mgmt-empty">No letters yet.</p>
+      {% endif %}
+    </div>
+  </section>
+</div>
+
+<script>
+  // ---- tabs ----
+  const tabs = document.querySelectorAll('.mgmt-tab');
+  const panels = document.querySelectorAll('.mgmt-panel');
+
+  function activateTab(name) {
+    const tab = document.querySelector(`.mgmt-tab[data-tab="${name}"]`);
+    const panel = document.querySelector(`.mgmt-panel[data-panel="${name}"]`);
+    if (!tab || !panel) return;
+    tabs.forEach(t => t.classList.remove('is-active'));
+    panels.forEach(p => p.classList.remove('is-active'));
+    tab.classList.add('is-active');
+    panel.classList.add('is-active');
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => activateTab(tab.dataset.tab));
+  });
+
+  // Land back on the right tab after a form POST redirects with a hash,
+  // e.g. saving the schedule redirects to /management#schedule.
+  if (location.hash) activateTab(location.hash.slice(1));
+
+  // ---- class schedule: cells containing literally "Blank" (or "None")
+  // render visually empty so the grid isn't noisy with the word "Blank"
+  // everywhere, but still show it the moment you focus/edit that cell,
+  // so it's clear the cell has a real value rather than being unset. ----
+  document.querySelectorAll('.mgmt-schedule-table input[type="text"]').forEach(input => {
+    input.addEventListener('input', () => {
+      const isBlank = ['blank', 'none'].includes(input.value.trim().toLowerCase());
+      input.classList.toggle('is-blank', isBlank);
+    });
+  });
+
+  // ---- status mode picker: keep the checked option's highlight in sync ----
+  document.querySelectorAll('.status-option input').forEach(input => {
+    input.addEventListener('change', () => {
+      document.querySelectorAll('.status-option').forEach(o => o.classList.remove('is-checked'));
+      input.closest('.status-option').classList.add('is-checked');
+    });
+  });
+
+  // ---- online now: live refresh, preserving any expanded <details> ----
+  const onlineOpenKeys = new Set();
+  const onlineList = document.getElementById('onlineList');
+  onlineList.addEventListener('toggle', e => {
+    if (!e.target.matches('details')) return;
+    const key = e.target.closest('li').dataset.key;
+    if (e.target.open) onlineOpenKeys.add(key);
+    else onlineOpenKeys.delete(key);
+  }, true);
+
+  function renderOnline(rows) {
+    document.getElementById('statOnlineCount').textContent = rows.length;
+    document.getElementById('onlineTabBadge').textContent = rows.length;
+
+    let empty = document.getElementById('onlineEmpty');
+    onlineList.innerHTML = '';
+
+    if (!rows.length) {
+      if (!empty) {
+        empty = document.createElement('p');
+        empty.className = 'mgmt-empty';
+        empty.id = 'onlineEmpty';
+        empty.textContent = 'No one online right now.';
+        onlineList.after(empty);
+      }
+      return;
+    }
+    if (empty) empty.remove();
+
+    for (const o of rows) {
+      const li = document.createElement('li');
+      li.className = 'letterlist__item';
+      li.dataset.key = o.key;
+
+      const meta = document.createElement('div');
+      meta.className = 'letterlist__meta mono';
+      const from = document.createElement('span');
+      from.className = 'letterlist__from';
+      from.textContent = o.kind === 'user' ? o.label : o.label.slice(0, 8);
+      meta.appendChild(from);
+      if (o.kind === 'user') {
+        const loggedIn = document.createElement('span');
+        loggedIn.className = 'dim';
+        loggedIn.textContent = '· logged in';
+        meta.appendChild(loggedIn);
+      }
+      const dot = document.createElement('span'); dot.className = 'dim'; dot.textContent = '·';
+      const on = document.createElement('span'); on.className = 'dim'; on.textContent = 'on ' + o.path;
+      meta.append(dot, on);
+      li.appendChild(meta);
+
+      const details = document.createElement('details');
+      details.className = 'letterlist__device-details';
+      details.open = onlineOpenKeys.has(o.key);
+      const summary = document.createElement('summary');
+      summary.className = 'letterlist__device-toggle mono dim';
+      summary.textContent = 'details';
+      details.appendChild(summary);
+
+      const dl = document.createElement('dl');
+      dl.className = 'letterlist__device mono dim';
+      const rowsData = [['page', o.path], ['ip', o.ip], ['visitor id', o.visitor_id], ['user agent', o.user_agent], ['last seen', o.last_seen]];
+      for (const [label, value] of rowsData) {
+        if (!value) continue;
+        const row = document.createElement('div');
+        row.className = 'letterlist__device-row';
+        const dt = document.createElement('dt'); dt.textContent = label;
+        const dd = document.createElement('dd'); dd.textContent = value;
+        row.append(dt, dd);
+        dl.appendChild(row);
+      }
+      details.appendChild(dl);
+      li.appendChild(details);
+      onlineList.appendChild(li);
+    }
+  }
+
+  async function pollOnline() {
+    try {
+      const res = await fetch('/management/api/online');
+      if (!res.ok) return;
+      const data = await res.json();
+      renderOnline(data.online);
+    } catch (e) { /* ignore transient errors */ }
+  }
+  setInterval(pollOnline, 5000);
+</script>
+</main>
+{% endblock %}

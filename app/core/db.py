@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 from flask import current_app, g
@@ -77,6 +78,44 @@ CREATE TABLE IF NOT EXISTS visitors (
     timezone TEXT
 );
 
+-- Single-row table holding the "my status" text shown on the public
+-- home page and editable from Site Management. Always id = 1.
+-- `mode` is a Discord-style presence indicator: online / idle / offline.
+CREATE TABLE IF NOT EXISTS site_status (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    status TEXT NOT NULL DEFAULT 'around',
+    mode TEXT NOT NULL DEFAULT 'online',
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+INSERT OR IGNORE INTO site_status (id, status) VALUES (1, 'around');
+
+-- Tracks anyone currently browsing the site — logged-in users and
+-- anonymous visitors alike — keyed by a stable identity per browser
+-- (username if logged in, else the visitor_id cookie). Updated on
+-- every page view so Site Management can show who's online and what
+-- page they're on right now.
+CREATE TABLE IF NOT EXISTS presence (
+    key TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    label TEXT NOT NULL,
+    visitor_id TEXT,
+    ip TEXT,
+    user_agent TEXT,
+    path TEXT,
+    last_seen TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Single-row table holding the class schedule shown on the public
+-- home page (#about) and editable from Site Management. Always id = 1.
+-- `schedule_json` is a list of periods: [{start, end, classes: [mon..fri]}].
+-- `holiday` overrides the schedule display with "HOLIDAY" when set.
+CREATE TABLE IF NOT EXISTS class_schedule (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    schedule_json TEXT NOT NULL DEFAULT '[]',
+    holiday INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS calls (
     id TEXT PRIMARY KEY,
     caller TEXT NOT NULL,
@@ -107,6 +146,20 @@ def init_db(app):
         cols = {row["name"] for row in db.execute("PRAGMA table_info(letters)")}
         if "visitor_id" not in cols:
             db.execute("ALTER TABLE letters ADD COLUMN visitor_id TEXT")
+
+        status_cols = {row["name"] for row in db.execute("PRAGMA table_info(site_status)")}
+        if "mode" not in status_cols:
+            db.execute("ALTER TABLE site_status ADD COLUMN mode TEXT NOT NULL DEFAULT 'online'")
+            db.execute("UPDATE site_status SET mode = 'online' WHERE mode IS NULL")
+
+        # Seed the class schedule with its default timetable the first time
+        # the table is created. Deferred import to avoid a circular import
+        # (app.core.schedule imports get_db from this module).
+        from app.core.schedule import DEFAULT_SCHEDULE
+        db.execute(
+            "INSERT OR IGNORE INTO class_schedule (id, schedule_json) VALUES (1, ?)",
+            (json.dumps(DEFAULT_SCHEDULE),),
+        )
 
         db.commit()
     app.teardown_appcontext(close_db)

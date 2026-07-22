@@ -1,0 +1,308 @@
+/* ============================================================
+   SITE MANAGEMENT
+   ============================================================ */
+
+.mgmt-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.mgmt-stat {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 18px;
+  min-width: 96px;
+}
+.mgmt-stat__value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--text);
+}
+.mgmt-stat__label {
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ---- tabs ---- */
+.mgmt-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.mgmt-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.mgmt-tab:hover { color: var(--text-dim); background: var(--panel); }
+.mgmt-tab.is-active { color: var(--accent); border-bottom-color: var(--accent); background: var(--accent-soft); }
+.mgmt-tab__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #0b0c0f;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ---- panels ---- */
+.mgmt-panel { display: none; }
+.mgmt-panel.is-active { display: block; animation: mgmt-fade-in 0.15s ease both; }
+@keyframes mgmt-fade-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.mgmt-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.mgmt-card + .mgmt-card { margin-top: 16px; }
+.mgmt-card h2 {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  margin: 0 0 14px;
+}
+
+/* ---- status icon (also used on the public home page) ---- */
+.status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.status-icon svg { width: 100%; height: 100%; overflow: visible; }
+.status-icon svg * { display: none; }
+
+.status-icon--online .ico-online { display: block; fill: var(--ok); }
+
+.status-icon--idle .ico-idle-base { display: block; fill: var(--warn); }
+.status-icon--idle .ico-idle-cut  { display: block; fill: var(--status-cut-bg, var(--panel)); }
+
+.status-icon--offline .ico-offline {
+  display: block;
+  fill: var(--text-faint);
+}
+
+/* ---- status picker (choose online / idle / offline) ---- */
+.status-picker {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 4px 0 16px;
+}
+.status-option {
+  --status-cut-bg: var(--bg-soft);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  color: var(--text-dim);
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.status-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.status-option.is-checked {
+  border-color: var(--accent-dim);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.status-current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.status-current__text { color: var(--text); }
+
+.mgmt-field-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mgmt-field-row input[type="text"] {
+  flex: 1 1 240px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  color: var(--text);
+  font-size: var(--fs-base);
+}
+
+/* ---- lists shared by online/visitors/letters panels ---- */
+.mgmt-empty {
+  color: var(--text-faint);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  text-align: center;
+}
+
+/* ---- toggle switch (holiday on/off) ---- */
+.mgmt-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.mgmt-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.mgmt-toggle__track {
+  position: relative;
+  flex: none;
+  width: 38px;
+  height: 22px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.mgmt-toggle__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  transition: transform 0.18s var(--ease), background 0.15s ease;
+}
+.mgmt-toggle input:checked + .mgmt-toggle__track { background: var(--accent-soft); border-color: var(--accent-dim); }
+.mgmt-toggle input:checked + .mgmt-toggle__track .mgmt-toggle__thumb { transform: translateX(16px); background: var(--accent); }
+.mgmt-toggle input:focus-visible + .mgmt-toggle__track { outline: 2px solid var(--accent-dim); outline-offset: 2px; }
+.mgmt-toggle:hover .mgmt-toggle__track { border-color: var(--border-strong); }
+.mgmt-toggle__label { color: var(--text-dim); font-size: var(--fs-base); line-height: 1.4; }
+
+/* ---- class schedule table ----
+   A horizontally-scrollable, spreadsheet-like grid. Cells whose value is
+   literally "Blank"/"None" render empty (border/background only) so the
+   grid reads as genuinely free periods, and only reveal the word "Blank"
+   while that cell is focused/edited, so it's clear it's a real value and
+   not an unset one. */
+.mgmt-schedule-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
+}
+.mgmt-schedule-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 760px;
+}
+.mgmt-schedule-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+  white-space: nowrap;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.mgmt-schedule-table th.mgmt-schedule-table__time { text-align: center; width: 78px; }
+.mgmt-schedule-table td {
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+.mgmt-schedule-table td:first-child { border-left: none; }
+.mgmt-schedule-table tbody tr:last-child td { border-bottom: none; }
+.mgmt-schedule-table tbody tr:hover td { background: var(--panel-hover); }
+
+.mgmt-schedule-table input[type="text"] {
+  display: block;
+  width: 100%;
+  min-width: 128px;
+  box-sizing: border-box;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0;
+  padding: 11px 12px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  transition: background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+.mgmt-schedule-table input[type="text"]::placeholder { color: var(--text-faint); }
+.mgmt-schedule-table input[type="text"]:hover { background: var(--panel-hover); }
+.mgmt-schedule-table input[type="text"]:focus {
+  outline: none;
+  background: var(--bg);
+  box-shadow: inset 0 0 0 1.5px var(--accent-dim);
+  z-index: 2;
+  position: relative;
+}
+.mgmt-schedule-table td.mgmt-schedule-table__time input,
+.mgmt-schedule-table td:nth-child(1) input,
+.mgmt-schedule-table td:nth-child(2) input {
+  min-width: 0;
+  width: 78px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+/* a cell whose saved value is literally "Blank"/"None": no visible text
+   until the cell is being edited, so it reads as an empty free period */
+.mgmt-schedule-table input.is-blank:not(:focus) { color: transparent; }
+.mgmt-schedule-table input.is-blank:not(:focus)::placeholder { color: transparent; }
+
+.mgmt-schedule-hint {
+  margin: 10px 2px 16px;
+  font-size: var(--fs-sm);
+}

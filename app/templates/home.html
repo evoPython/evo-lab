@@ -60,7 +60,50 @@
         <div class="inner">
           <p class="eyebrow">about</p>
           <h1>about me</h1>
-          <p>work in progress!</p>
+
+          <div class="rh-profile fade-up">
+            <div class="rh-profile__top">
+              <div class="rh-profile__avatar">
+                <img src="{{ url_for('static', filename='images/pfp.png') }}" alt="" class="rh-profile__avatar-img">
+                <span class="rh-profile__badge rh-profile__badge--{{ status_mode }}" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <circle class="ico-online" cx="12" cy="12" r="9"></circle>
+                    <circle class="ico-idle-base" cx="12" cy="12" r="9"></circle>
+                    <circle class="ico-idle-cut" cx="8.4" cy="8.4" r="7"></circle>
+                    <circle class="ico-offline" cx="12" cy="12" r="8"></circle>
+                  </svg>
+                </span>
+              </div>
+
+              <div class="rh-profile__id">
+                <p class="rh-profile__name">evo.py</p>
+                <p class="rh-profile__realname">(Jaino Cabrera)</p>
+              </div>
+
+              <button type="button" class="rh-class-chip" id="classChip" data-state="loading" aria-haspopup="dialog" aria-label="current class — view schedule">
+                <span class="rh-class-chip__text">
+                  <span class="rh-class-chip__label">current class</span>
+                  <span class="rh-class-chip__value" id="currentClassValue">—</span>
+                </span>
+              </button>
+            </div>
+            <p class="rh-profile__status-text" id="statusBubble">
+              <span class="rh-status-content-wrap">
+                <span class="rh-status-text-content" id="statusContent">{{ status_text }}</span>
+                <span class="rh-status-fade" id="statusFade" aria-hidden="true"></span>
+              </span>
+              <button type="button" class="rh-status-toggle" id="statusToggle" hidden>see more...</button>
+            </p>
+
+            <script type="application/json" id="scheduleData">{{ {"periods": schedule_periods, "holiday": schedule_holiday} | tojson }}</script>
+
+            <div class="rh-profile__divider"></div>
+
+            <div class="rh-profile__bio">
+              <p class="rh-profile__bio-label">bio</p>
+              <p class="rh-profile__bio-text">work in progress!</p>
+            </div>
+          </div>
 
           <div class="rh-board" id="board">
             <p class="rh-board-caption">woah, about me text.</p>
@@ -203,6 +246,10 @@
 
   <div class="rh-modal-overlay" id="modalOverlay">
     <div class="rh-modal" id="modalContent" role="dialog" aria-modal="true" aria-labelledby="modalTitle"></div>
+  </div>
+
+  <div class="rh-modal-overlay" id="scheduleModalOverlay">
+    <div class="rh-modal rh-modal--schedule" id="scheduleModalContent" role="dialog" aria-modal="true" aria-labelledby="scheduleModalTitle"></div>
   </div>
 
   <img src="{{ url_for('static', filename='images/pfp.png') }}" alt="" id="floatPfp" class="rh-float-pfp" draggable="false">

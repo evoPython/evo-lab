@@ -326,10 +326,296 @@
   }
 
   /* ------------------------------------------------------------
+     CURRENT CLASS — #about "Current class:" line on the home page.
+     Reads the schedule embedded by the server (#scheduleData) and
+     figures out what period it is right now in Asia/Manila time,
+     regardless of the visitor's own timezone. Re-checks periodically
+     so it moves on to the next period on its own without a reload.
+     ------------------------------------------------------------ */
+  function initSchedule() {
+    const dataEl = document.getElementById('scheduleData');
+    const targetEl = document.getElementById('currentClassValue');
+    const chipEl = document.getElementById('classChip');
+    if (!dataEl || !targetEl) return;
+
+    let schedule;
+    try {
+      schedule = JSON.parse(dataEl.textContent);
+    } catch (e) {
+      return;
+    }
+
+    const DAY_INDEX = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4 };
+
+    function toMinutes(hhmm) {
+      const [h, m] = hhmm.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    function setChip(state, text) {
+      targetEl.textContent = text;
+      if (chipEl) {
+        chipEl.dataset.state = state;
+        chipEl.title = text;
+      }
+      syncStatusBubbleWidth();
+    }
+
+    // On PC the chip sits top-right of the same row as the status
+    // bubble, and its own width shifts with the schedule text ("free
+    // period" vs "HOLIDAY" vs a long class name) — so rather than
+    // guess a fixed cutoff in CSS, measure the chip's actual left
+    // edge and cap the bubble's width just short of it, with a little
+    // breathing room. On mobile the chip drops onto its own row below,
+    // so no cap is needed there.
+    function syncStatusBubbleWidth() {
+      const profile = document.querySelector('.rh-profile');
+      const status = document.querySelector('.rh-profile__status-text');
+      if (!profile || !status || !chipEl) return;
+
+      if (!window.matchMedia('(min-width: 481px)').matches) {
+        status.style.removeProperty('--status-max-w');
+        return;
+      }
+
+      const profileRect = profile.getBoundingClientRect();
+      const chipRect = chipEl.getBoundingClientRect();
+      const breathingRoom = 24;
+      const available = (chipRect.left - profileRect.left) - status.offsetLeft - breathingRoom;
+      status.style.setProperty('--status-max-w', Math.max(available, 60) + 'px');
+    }
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(syncStatusBubbleWidth, 100);
+    });
+
+    // Shared with the schedule popup below, so "today"/"now" line up
+    // with whatever the chip itself is showing.
+    function getManilaNow() {
+      const fmt = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Manila',
+        weekday: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+      const parts = {};
+      fmt.formatToParts(new Date()).forEach(p => { parts[p.type] = p.value; });
+
+      const dayIdx = DAY_INDEX[parts.weekday];
+      const hour = parseInt(parts.hour, 10) % 24; // "24:00" at midnight in some browsers
+      const minute = parseInt(parts.minute, 10);
+      return { dayIdx, nowMin: hour * 60 + minute };
+    }
+
+    function update() {
+      if (schedule.holiday) {
+        setChip('holiday', 'HOLIDAY');
+        return;
+      }
+
+      const { dayIdx, nowMin } = getManilaNow();
+      if (dayIdx === undefined) {
+        setChip('weekend', 'no class (weekend)');
+        return;
+      }
+
+      let current = null;
+      for (const period of (schedule.periods || [])) {
+        if (nowMin >= toMinutes(period.start) && nowMin < toMinutes(period.end)) {
+          current = period.classes[dayIdx];
+          break;
+        }
+      }
+
+      const isEmpty = !current || ['blank', 'none'].includes(current.trim().toLowerCase());
+      setChip(isEmpty ? 'free' : 'class', isEmpty ? 'free period' : current);
+    }
+
+    update();
+    setInterval(update, 15000);
+
+    /* ------------------------------------------------------------
+       SCHEDULE POPUP — clicking the "current class" chip opens a
+       closable, read-only view of the same schedule from
+       /management#schedule (schedule.periods / schedule.holiday,
+       already embedded above in #scheduleData).
+       ------------------------------------------------------------ */
+    const scheduleModalOverlay = document.getElementById('scheduleModalOverlay');
+    const scheduleModalContent = document.getElementById('scheduleModalContent');
+    const DAY_LABELS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+    let scheduleLastFocused = null;
+
+    function formatHour(hhmm) {
+      const [h, m] = hhmm.split(':').map(Number);
+      const period = h < 12 ? 'am' : 'pm';
+      const h12 = ((h + 11) % 12) + 1;
+      return `${h12}:${String(m).padStart(2, '0')}${period}`;
+    }
+
+    function openSchedulePopup() {
+      if (!chipEl || !scheduleModalOverlay || !scheduleModalContent) return;
+      scheduleLastFocused = document.activeElement;
+
+      const { dayIdx, nowMin } = getManilaNow();
+      const periods = schedule.periods || [];
+
+      const headerCells = DAY_LABELS.map((label, i) =>
+        `<th${i === dayIdx ? ' data-today="true"' : ''}>${label}</th>`).join('');
+
+      const rows = periods.map((period) => {
+        const isNowRow = dayIdx !== undefined
+          && nowMin >= toMinutes(period.start) && nowMin < toMinutes(period.end);
+        const cells = DAY_LABELS.map((_, i) => {
+          const raw = period.classes ? period.classes[i] : '';
+          const isFree = !raw || ['blank', 'none'].includes(String(raw).trim().toLowerCase());
+          return `<td class="${isFree ? 'is-free' : ''}">${isFree ? '—' : escapeHtml(raw)}</td>`;
+        }).join('');
+        return `<tr class="${isNowRow ? 'is-now' : ''}"><td>${formatHour(period.start)}–${formatHour(period.end)}</td>${cells}</tr>`;
+      }).join('');
+
+      scheduleModalContent.innerHTML = `
+        <button class="rh-modal__close" id="scheduleModalCloseBtn">close ✕</button>
+        <h3 id="scheduleModalTitle">class schedule</h3>
+        <p class="rh-modal__sub">read-only · mon–fri · Asia/Manila time</p>
+        ${schedule.holiday ? '<p class="rh-schedule-banner">today is a holiday — no classes.</p>' : ''}
+        <div class="rh-schedule-scroll">
+          <table class="rh-schedule-table">
+            <thead><tr><th class="rh-schedule-table__time">time</th>${headerCells}</tr></thead>
+            <tbody>${rows || '<tr><td colspan="6" class="is-free">no schedule set</td></tr>'}</tbody>
+          </table>
+        </div>
+      `;
+      scheduleModalOverlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      document.getElementById('scheduleModalCloseBtn')?.addEventListener('click', () => closeSchedulePopup(true));
+      document.getElementById('scheduleModalCloseBtn')?.focus();
+    }
+
+    function closeSchedulePopup(restoreFocus) {
+      scheduleModalOverlay?.classList.remove('open');
+      document.body.style.overflow = '';
+      if (restoreFocus && scheduleLastFocused) scheduleLastFocused.focus();
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      }[c]));
+    }
+
+    chipEl?.addEventListener('click', openSchedulePopup);
+    scheduleModalOverlay?.addEventListener('click', (e) => {
+      if (e.target === scheduleModalOverlay) closeSchedulePopup(true);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && scheduleModalOverlay?.classList.contains('open')) closeSchedulePopup(true);
+    });
+  }
+
+  /* ------------------------------------------------------------
+     STATUS BUBBLE CLAMP — the "thought bubble" status text is
+     absolutely positioned beside the avatar, so a long status used
+     to just keep wrapping downward until it visually clipped into
+     the name/realname below it. Instead, measure how much vertical
+     room actually exists before that point (this shifts with
+     viewport width/layout — mobile stacks the chip below the id
+     block, PC doesn't) and clamp to however many lines fit, with a
+     fade + "see more..." toggle for the rest.
+     ------------------------------------------------------------ */
+  function initStatusClamp() {
+    const bubble = document.getElementById('statusBubble');
+    const content = document.getElementById('statusContent');
+    const toggle = document.getElementById('statusToggle');
+    const idBlock = document.querySelector('.rh-profile__id');
+    if (!bubble || !content || !toggle) return;
+
+    function clampTo(lines) {
+      content.style.display = '-webkit-box';
+      content.style.webkitBoxOrient = 'vertical';
+      content.style.overflow = 'hidden';
+      content.style.webkitLineClamp = String(lines);
+    }
+
+    function unclamp() {
+      content.style.display = 'block';
+      content.style.overflow = 'visible';
+      content.style.removeProperty('-webkit-line-clamp');
+    }
+
+    function measure() {
+      if (bubble.dataset.expanded === 'true') return;
+
+      // Read the text's natural (unclamped) height first so we can
+      // tell whether it would actually overflow the available space.
+      unclamp();
+      const naturalHeight = content.scrollHeight;
+      const lineHeight = parseFloat(getComputedStyle(content).lineHeight) || 16;
+
+      let available = naturalHeight;
+      if (idBlock) {
+        const bubbleRect = bubble.getBoundingClientRect();
+        const idRect = idBlock.getBoundingClientRect();
+        const buffer = 14; // breathing room before the name itself
+        available = Math.max(idRect.top - bubbleRect.top - buffer, lineHeight);
+      }
+
+      const maxLines = Math.max(1, Math.floor(available / lineHeight));
+
+      if (naturalHeight > maxLines * lineHeight + 1) {
+        clampTo(maxLines);
+        bubble.classList.add('is-clamped');
+        toggle.hidden = false;
+        toggle.textContent = 'see more...';
+      } else {
+        bubble.classList.remove('is-clamped');
+        toggle.hidden = true;
+      }
+    }
+
+    toggle.addEventListener('click', () => {
+      const expanded = bubble.dataset.expanded === 'true';
+      if (expanded) {
+        bubble.dataset.expanded = 'false';
+        bubble.classList.remove('is-expanded');
+        toggle.textContent = 'see more...';
+        measure();
+      } else {
+        bubble.dataset.expanded = 'true';
+        bubble.classList.add('is-expanded');
+        bubble.classList.remove('is-clamped');
+        unclamp();
+        toggle.textContent = 'see less...';
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (bubble.dataset.expanded === 'true' && !bubble.contains(e.target)) {
+        bubble.dataset.expanded = 'false';
+        bubble.classList.remove('is-expanded');
+        toggle.textContent = 'see more...';
+        measure();
+      }
+    });
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(measure, 100);
+    });
+
+    measure();
+  }
+
+  /* ------------------------------------------------------------
      Shared boot — runs on every page that loads this file
      ------------------------------------------------------------ */
   document.addEventListener('DOMContentLoaded', () => {
     initClock();
+    initSchedule();
+    initStatusClamp();
     initPageTransitions();
     initBatteryRangeTabs();
 
@@ -725,10 +1011,10 @@
       title: 'evo-lab',
       glyph: '◆',
       tag: 'web',
-      desc: 'A personal homelab run 24/7 on a 6 year old laptop.',
+      desc: 'A personal homelab run "24/7" on a 6 year old laptop.',
       tags: ['web'],
       link: '#',
-      body: 'Started as a way to stop paying for hosting I didn\'t need, and turned into the thing this whole site runs on. It serves this page, a handful of internal tools, and whatever I\'m tinkering with that week — reverse proxied behind a single entry point, with cron jobs doing the parts I\'m too lazy to automate properly.',
+      body: 'Started as a small project to unite my phone and laptop files. Decided to give it a portfolio-like front page, non-LAN support through tailscale, and even baked my music tool into the root dashboard. Unfortunately I can\'t guarantee 100% uptime, but it\'s good enough!'
     },
     {
       id: 'carwash-pos',

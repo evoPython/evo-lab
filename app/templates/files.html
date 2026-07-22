@@ -1,37 +1,891 @@
 {% extends "app_base.html" %}
 
-{% block title %}File Transfer{% endblock %}
+{% block title %}Files{% endblock %}
 
 {% block content %}
 <main class="stage" id="stage">
-<div class="page-shell">
-  <h1>File Transfer</h1>
+<div class="page-shell fe-shell">
+  <a class="back-link mono" href="/tools">&larr; back to tools</a>
 
-  {% if error %}
-  <p class="error">{{ error }}</p>
-  {% endif %}
-
-  <form method="post" enctype="multipart/form-data" class="form-row">
-    <input type="file" name="file">
-    <button type="submit" class="btn btn--primary">Upload</button>
-  </form>
-
-  <h2 class="h2">Files on laptop</h2>
-
-  {% if files %}
-  <div class="filelist">
-  {% for f in files %}
-    <div class="filelist__row">
-      <span class="filelist__name">{{ f }}</span>
-      <a class="btn btn--sm" href="/tools/files/download/{{ f }}">Download</a>
+  <div class="fe-toolbar">
+    <nav class="fe-breadcrumb mono" id="fe-breadcrumb" aria-label="Path"></nav>
+    <div class="fe-toolbar__selectbar" id="fe-selectbar" hidden>
+      <span class="fe-select-count mono" id="fe-select-count">0 selected</span>
+      <button type="button" class="fe-icon-btn" id="fe-dots-btn" aria-label="More actions">&#8942;</button>
+      <button type="button" class="fe-icon-btn" id="fe-cancel-btn" aria-label="Cancel selection">&#10005;</button>
     </div>
-  {% endfor %}
   </div>
-  {% else %}
-  <p class="filelist__empty">No files uploaded yet.</p>
-  {% endif %}
 
-  <a class="back-link mono" href="/tools" style="margin-top: 20px; display: inline-flex;">&larr; back to tools</a>
+  <div class="fe-dropzone" id="fe-dropzone">
+    <div class="fe-empty" id="fe-empty" hidden>Nothing here yet — drop a file or use the + button to upload.</div>
+    <div class="fe-grid" id="fe-grid"></div>
+    <div class="fe-drop-overlay" id="fe-drop-overlay">Drop to upload here</div>
+  </div>
 </div>
 </main>
+
+<input type="file" id="fe-file-input" multiple hidden>
+
+<button type="button" class="btn btn--primary fe-fab" id="fe-fab" aria-haspopup="true" aria-expanded="false" aria-label="Add">+</button>
+<div class="fe-popover" id="fe-add-menu" hidden>
+  <button type="button" data-action="upload">Upload files</button>
+  <button type="button" data-action="new-folder">New folder</button>
+</div>
+
+<div class="fe-ctxmenu" id="fe-ctxmenu" hidden></div>
+
+<div class="fe-sheet-overlay" id="fe-sheet-overlay" hidden></div>
+<div class="fe-sheet" id="fe-sheet" hidden></div>
+
+<div class="fe-uploads" id="fe-uploads" hidden></div>
+
+<div class="fe-preview-overlay" id="fe-preview-overlay" hidden></div>
+<div class="fe-preview" id="fe-preview" hidden></div>
+
+<script>
+(function () {
+  var LIST_URL = '/tools/files/api/list';
+  var UPLOAD_URL = '/tools/files/api/upload';
+  var MKDIR_URL = '/tools/files/api/mkdir';
+  var RENAME_URL = '/tools/files/api/rename';
+  var DELETE_URL = '/tools/files/api/delete';
+  var MOVE_URL = '/tools/files/api/move';
+  var ZIP_URL = '/tools/files/api/download-zip';
+  var DOWNLOAD_BASE = '/tools/files/download/';
+  var VIEW_BASE = '/tools/files/view/';
+
+  var grid = document.getElementById('fe-grid');
+  var emptyEl = document.getElementById('fe-empty');
+  var breadcrumbEl = document.getElementById('fe-breadcrumb');
+  var dropzone = document.getElementById('fe-dropzone');
+  var dropOverlay = document.getElementById('fe-drop-overlay');
+  var fileInput = document.getElementById('fe-file-input');
+  var fab = document.getElementById('fe-fab');
+  var addMenu = document.getElementById('fe-add-menu');
+  var ctxMenu = document.getElementById('fe-ctxmenu');
+  var selectbar = document.getElementById('fe-selectbar');
+  var selectCountEl = document.getElementById('fe-select-count');
+  var dotsBtn = document.getElementById('fe-dots-btn');
+  var cancelBtn = document.getElementById('fe-cancel-btn');
+  var sheetOverlay = document.getElementById('fe-sheet-overlay');
+  var sheet = document.getElementById('fe-sheet');
+  var uploadsPanel = document.getElementById('fe-uploads');
+  var previewOverlay = document.getElementById('fe-preview-overlay');
+  var previewEl = document.getElementById('fe-preview');
+
+  var currentPath = '';
+  var selected = {};       // path -> true
+  var selectedCount = 0;
+  var selectionMode = false;
+
+  var FOLDER_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.9c.46 0 .9.18 1.23.5l1.24 1.24c.33.32.77.5 1.23.5H19.5A1.5 1.5 0 0 1 21 8.74V17.5A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5v-11Z"/></svg>';
+  var FILE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 2.75A1.75 1.75 0 0 0 4.25 4.5v15A1.75 1.75 0 0 0 6 21.25h12A1.75 1.75 0 0 0 19.75 19.5V9.06a1.75 1.75 0 0 0-.51-1.24l-5.31-5.3a1.75 1.75 0 0 0-1.24-.52H6Z"/><path d="M13 2.9V7.5c0 .97.78 1.75 1.75 1.75h4.6"/></svg>';
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function cssEscape(s) {
+    return (window.CSS && CSS.escape) ? CSS.escape(s) : String(s).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+  }
+
+  function fmtSize(bytes) {
+    if (bytes === null || bytes === undefined) return '';
+    if (bytes < 1024) return bytes + ' B';
+    var units = ['KB', 'MB', 'GB', 'TB'];
+    var v = bytes, i = -1;
+    do { v /= 1024; i++; } while (v >= 1024 && i < units.length - 1);
+    return v.toFixed(v < 10 ? 1 : 0) + ' ' + units[i];
+  }
+
+  function fmtDate(iso) {
+    try {
+      var d = new Date(iso);
+      var now = new Date();
+      var opts = { month: 'short', day: 'numeric' };
+      if (d.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
+      return d.toLocaleDateString(undefined, opts);
+    } catch (e) { return ''; }
+  }
+
+  function rowByPath(path) {
+    return grid.querySelector('.fe-row[data-path="' + cssEscape(path) + '"]');
+  }
+
+  // ---------------------------------------------------------------
+  // Navigation / rendering
+  // ---------------------------------------------------------------
+
+  function renderBreadcrumb() {
+    var parts = currentPath ? currentPath.split('/').filter(Boolean) : [];
+    var html = '<button type="button" class="fe-crumb" data-path="">Files</button>';
+    var acc = '';
+    parts.forEach(function (p) {
+      acc = acc ? acc + '/' + p : p;
+      html += '<span class="fe-crumb-sep">/</span><button type="button" class="fe-crumb" data-path="' +
+        acc.replace(/"/g, '&quot;') + '">' + escapeHtml(p) + '</button>';
+    });
+    breadcrumbEl.innerHTML = html;
+  }
+
+  function renderGrid(entries) {
+    grid.innerHTML = '';
+    emptyEl.hidden = entries.length > 0;
+    entries.forEach(function (entry) {
+      var row = document.createElement('div');
+      row.className = 'fe-row';
+      row.draggable = true;
+      row.dataset.path = entry.path;
+      row.dataset.isDir = entry.is_dir ? '1' : '0';
+      row.dataset.name = entry.name;
+      row.innerHTML =
+        '<span class="fe-row__check" aria-hidden="true"></span>' +
+        '<span class="fe-row__icon">' + (entry.is_dir ? FOLDER_ICON : FILE_ICON) + '</span>' +
+        '<span class="fe-row__name">' + escapeHtml(entry.name) + '</span>' +
+        '<span class="fe-row__meta">' + (entry.is_dir ? '' : fmtSize(entry.size)) + '</span>' +
+        '<span class="fe-row__meta fe-row__meta--date">' + fmtDate(entry.modified) + '</span>' +
+        '<button type="button" class="fe-row__dots" aria-label="More actions">&#8942;</button>';
+      grid.appendChild(row);
+    });
+    applySelectionClasses();
+  }
+
+  function loadDir(path, push) {
+    closeAllMenus();
+    return fetch(LIST_URL + '?path=' + encodeURIComponent(path), { cache: 'no-store' })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.status !== 'ok') {
+          if (path !== '') return loadDir('', push);
+          renderGrid([]);
+          return;
+        }
+        currentPath = data.path || '';
+        exitSelection();
+        renderBreadcrumb();
+        renderGrid(data.entries);
+        if (push !== false) {
+          var url = currentPath ? ('?path=' + encodeURIComponent(currentPath)) : location.pathname;
+          history.pushState({ path: currentPath }, '', url);
+        }
+      });
+  }
+
+  window.addEventListener('popstate', function (e) {
+    var p = (e.state && e.state.path) || new URLSearchParams(location.search).get('path') || '';
+    loadDir(p, false);
+  });
+
+  // ---------------------------------------------------------------
+  // Selection
+  // ---------------------------------------------------------------
+
+  function applySelectionClasses() {
+    var rows = grid.querySelectorAll('.fe-row');
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].classList.toggle('is-selected', !!selected[rows[i].dataset.path]);
+    }
+    grid.classList.toggle('fe-grid--selecting', selectionMode);
+  }
+
+  function updateToolbarMode() {
+    var active = selectionMode;
+    breadcrumbEl.hidden = active;
+    selectbar.hidden = !active;
+    fab.classList.toggle('is-hidden', active);
+    selectCountEl.textContent = selectedCount + (selectedCount === 1 ? ' selected' : ' selected');
+  }
+
+  function selectedPaths() {
+    return Object.keys(selected);
+  }
+
+  function toggleSelect(path) {
+    if (selected[path]) { delete selected[path]; selectedCount--; }
+    else { selected[path] = true; selectedCount++; }
+    if (selectedCount === 0) selectionMode = false;
+    updateToolbarMode();
+    applySelectionClasses();
+  }
+
+  function enterSelection(path) {
+    selectionMode = true;
+    selected = {};
+    selectedCount = 0;
+    if (path) { selected[path] = true; selectedCount = 1; }
+    updateToolbarMode();
+    applySelectionClasses();
+  }
+
+  function exitSelection() {
+    selectionMode = false;
+    selected = {};
+    selectedCount = 0;
+    updateToolbarMode();
+    applySelectionClasses();
+  }
+
+  function rangeSelect(path) {
+    var rows = grid.querySelectorAll('.fe-row');
+    var paths = Array.prototype.map.call(rows, function (r) { return r.dataset.path; });
+    var anchor = paths.filter(function (p) { return selected[p]; })[0] || paths[0];
+    var i1 = paths.indexOf(anchor), i2 = paths.indexOf(path);
+    var lo = Math.min(i1, i2), hi = Math.max(i1, i2);
+    for (var i = lo; i <= hi; i++) {
+      if (!selected[paths[i]]) { selected[paths[i]] = true; selectedCount++; }
+    }
+    selectionMode = true;
+    updateToolbarMode();
+    applySelectionClasses();
+  }
+
+  // ---------------------------------------------------------------
+  // Row interaction: click / ctrl-click / shift-click / right-click / long-press
+  // ---------------------------------------------------------------
+
+  var pressTimer = null;
+  var pressStart = null;
+  var longPressFired = false;
+  var lastPointerType = 'mouse';
+  var touchArmedPath = null;
+  var touchDrag = null; // { ghost, target }
+  var TOUCH_DRAG_THRESHOLD = 14;
+
+  function makeTouchGhost(paths) {
+    var ghost = document.createElement('div');
+    ghost.className = 'fe-touch-ghost';
+    var label = paths.length === 1
+      ? (rowByPath(paths[0]) ? rowByPath(paths[0]).dataset.name : paths[0])
+      : paths.length + ' items';
+    ghost.innerHTML = '<span class="fe-touch-ghost__icon">' + FILE_ICON + '</span>' +
+      '<span class="fe-touch-ghost__label"></span>';
+    ghost.querySelector('.fe-touch-ghost__label').textContent = label;
+    document.body.appendChild(ghost);
+    return ghost;
+  }
+
+  function touchDropTargetAt(x, y) {
+    var el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    var row = el.closest && el.closest('.fe-row[data-is-dir="1"]');
+    if (row && !(dragPaths && dragPaths.indexOf(row.dataset.path) !== -1)) {
+      return { el: row, path: row.dataset.path };
+    }
+    var crumb = el.closest && el.closest('.fe-crumb');
+    if (crumb) return { el: crumb, path: crumb.dataset.path };
+    return null;
+  }
+
+  function startTouchDrag(row, x, y) {
+    var paths = (selected[row.dataset.path] && selectedCount > 1) ? selectedPaths() : [row.dataset.path];
+    dragPaths = paths;
+    touchDrag = { ghost: makeTouchGhost(paths), target: null };
+    touchDrag.ghost.style.left = x + 'px';
+    touchDrag.ghost.style.top = y + 'px';
+    if (navigator.vibrate) navigator.vibrate(8);
+  }
+
+  function updateTouchDrag(x, y) {
+    if (!touchDrag) return;
+    touchDrag.ghost.style.left = x + 'px';
+    touchDrag.ghost.style.top = y + 'px';
+    var hit = touchDropTargetAt(x, y);
+    if (touchDrag.target && (!hit || touchDrag.target.el !== hit.el)) {
+      touchDrag.target.el.classList.remove('is-drop-target');
+      touchDrag.target = null;
+    }
+    if (hit && !touchDrag.target) {
+      clearDropTargets();
+      hit.el.classList.add('is-drop-target');
+      touchDrag.target = hit;
+    }
+  }
+
+  function endTouchDrag() {
+    if (!touchDrag) return;
+    var target = touchDrag.target;
+    var paths = dragPaths;
+    touchDrag.ghost.remove();
+    clearDropTargets();
+    touchDrag = null;
+    dragPaths = null;
+    if (target && paths && paths.length) movePaths(paths, target.path);
+    exitSelection();
+  }
+
+  function clearTouchArm() {
+    if (touchArmedPath) {
+      var armedRow = rowByPath(touchArmedPath);
+      if (armedRow) armedRow.classList.remove('is-armed');
+    }
+    touchArmedPath = null;
+  }
+
+  grid.addEventListener('pointerdown', function (e) {
+    var row = e.target.closest('.fe-row');
+    if (!row) return;
+    longPressFired = false;
+    clearTouchArm();
+    lastPointerType = e.pointerType;
+    pressStart = { x: e.clientX, y: e.clientY };
+    if (e.pointerType !== 'mouse') {
+      pressTimer = setTimeout(function () {
+        longPressFired = true;
+        touchArmedPath = row.dataset.path;
+        row.classList.add('is-armed');
+        if (navigator.vibrate) navigator.vibrate(12);
+        enterSelection(row.dataset.path);
+      }, 500);
+    }
+  });
+  grid.addEventListener('pointermove', function (e) {
+    if (!pressStart) return;
+    var dist = Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y);
+
+    if (pressTimer) {
+      // Still waiting to arm — a real move here means "scroll", not "select".
+      if (dist > 10) { clearTimeout(pressTimer); pressTimer = null; }
+      return;
+    }
+
+    if (touchArmedPath && !touchDrag && dist > TOUCH_DRAG_THRESHOLD) {
+      // Armed via long-press, then the finger kept moving — that's a drag.
+      startTouchDrag(rowByPath(touchArmedPath), e.clientX, e.clientY);
+    }
+    if (touchDrag) {
+      e.preventDefault();
+      updateTouchDrag(e.clientX, e.clientY);
+    }
+  }, { passive: false });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evt) {
+    grid.addEventListener(evt, function () {
+      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+      if (touchDrag) endTouchDrag();
+      clearTouchArm();
+    });
+  });
+
+  grid.addEventListener('click', function (e) {
+    if (longPressFired) { longPressFired = false; return; }
+
+    var dotsEl = e.target.closest('.fe-row__dots');
+    var row = e.target.closest('.fe-row');
+    if (!row) return;
+
+    if (dotsEl) {
+      if (!selected[row.dataset.path]) enterSelection(row.dataset.path);
+      var r = dotsEl.getBoundingClientRect();
+      openMenuFor(r.left, r.bottom + 4, selectedPaths());
+      return;
+    }
+
+    if (selectionMode) { toggleSelect(row.dataset.path); return; }
+
+    if (e.ctrlKey || e.metaKey) { toggleSelect(row.dataset.path); selectionMode = selectedCount > 0; updateToolbarMode(); return; }
+    if (e.shiftKey) { rangeSelect(row.dataset.path); return; }
+
+    if (row.dataset.isDir === '1') {
+      loadDir(row.dataset.path);
+    } else {
+      openPreview(row.dataset.path, row.dataset.name);
+    }
+  });
+
+  grid.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    var row = e.target.closest('.fe-row');
+    if (!row) { openMenuFor(e.clientX, e.clientY, []); return; }
+    if (!selected[row.dataset.path]) enterSelection(row.dataset.path);
+    openMenuFor(e.clientX, e.clientY, selectedPaths());
+  });
+
+  // ---------------------------------------------------------------
+  // Drag & drop: reordering files/folders into other folders
+  // ---------------------------------------------------------------
+
+  var DRAG_MIME = 'application/x-fe-paths';
+  var dragPaths = null;
+
+  function clearDropTargets() {
+    var els = document.querySelectorAll('.is-drop-target');
+    for (var i = 0; i < els.length; i++) els[i].classList.remove('is-drop-target');
+  }
+
+  function isInternalDrag(e) {
+    return !!dragPaths || (e.dataTransfer &&
+      Array.prototype.indexOf.call(e.dataTransfer.types || [], DRAG_MIME) !== -1);
+  }
+
+  function readDragPaths(e) {
+    try {
+      var raw = e.dataTransfer.getData(DRAG_MIME);
+      if (raw) return JSON.parse(raw);
+    } catch (err) {}
+    return null;
+  }
+
+  function movePaths(paths, destPath) {
+    fetch(MOVE_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths: paths, dest: destPath })
+    }).then(function (res) { return res.json(); }).then(function (data) {
+      if (data.status === 'error') alert(data.message || 'Move failed.');
+      exitSelection();
+      loadDir(currentPath, false);
+    }).catch(function () { alert('Move failed.'); });
+  }
+
+  grid.addEventListener('dragstart', function (e) {
+    var row = e.target.closest('.fe-row');
+    if (!row) return;
+    if (lastPointerType !== 'mouse') { e.preventDefault(); return; }
+    var paths = (selected[row.dataset.path] && selectedCount > 1) ? selectedPaths() : [row.dataset.path];
+    dragPaths = paths;
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData(DRAG_MIME, JSON.stringify(paths)); } catch (err) {}
+    try { e.dataTransfer.setData('text/plain', paths.join('\n')); } catch (err) {}
+    row.classList.add('is-dragging');
+  });
+
+  grid.addEventListener('dragend', function () {
+    dragPaths = null;
+    var dragging = grid.querySelector('.fe-row.is-dragging');
+    if (dragging) dragging.classList.remove('is-dragging');
+    clearDropTargets();
+  });
+
+  grid.addEventListener('dragover', function (e) {
+    var row = e.target.closest('.fe-row');
+    if (!row || row.dataset.isDir !== '1' || !isInternalDrag(e)) return;
+    if (dragPaths && dragPaths.indexOf(row.dataset.path) !== -1) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!row.classList.contains('is-drop-target')) { clearDropTargets(); row.classList.add('is-drop-target'); }
+  });
+  grid.addEventListener('dragleave', function (e) {
+    var row = e.target.closest('.fe-row');
+    if (row) row.classList.remove('is-drop-target');
+  });
+  grid.addEventListener('drop', function (e) {
+    var row = e.target.closest('.fe-row');
+    if (!row || row.dataset.isDir !== '1' || !isInternalDrag(e)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    clearDropTargets();
+    var paths = dragPaths || readDragPaths(e);
+    if (!paths || !paths.length || paths.indexOf(row.dataset.path) !== -1) return;
+    movePaths(paths, row.dataset.path);
+  });
+
+  breadcrumbEl.addEventListener('dragover', function (e) {
+    var crumb = e.target.closest('.fe-crumb');
+    if (!crumb || !isInternalDrag(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!crumb.classList.contains('is-drop-target')) { clearDropTargets(); crumb.classList.add('is-drop-target'); }
+  });
+  breadcrumbEl.addEventListener('dragleave', function (e) {
+    var crumb = e.target.closest('.fe-crumb');
+    if (crumb) crumb.classList.remove('is-drop-target');
+  });
+  breadcrumbEl.addEventListener('drop', function (e) {
+    var crumb = e.target.closest('.fe-crumb');
+    if (!crumb || !isInternalDrag(e)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    clearDropTargets();
+    var paths = dragPaths || readDragPaths(e);
+    if (!paths || !paths.length) return;
+    movePaths(paths, crumb.dataset.path);
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!selectionMode) return;
+    if (e.target.closest('.fe-row') ||
+        e.target.closest('.fe-toolbar__selectbar') ||
+        e.target.closest('#fe-ctxmenu') ||
+        e.target.closest('#fe-sheet') ||
+        e.target.closest('#fe-add-menu') ||
+        e.target.closest('#fe-preview') ||
+        e.target === fab) return;
+    exitSelection();
+  });
+
+  breadcrumbEl.addEventListener('click', function (e) {
+    var btn = e.target.closest('.fe-crumb');
+    if (btn) loadDir(btn.dataset.path);
+  });
+
+  dotsBtn.addEventListener('click', function (e) {
+    var r = dotsBtn.getBoundingClientRect();
+    openMenuFor(r.left, r.bottom + 4, selectedPaths());
+  });
+  cancelBtn.addEventListener('click', exitSelection);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (!previewEl.hidden) { closePreview(); return; }
+    closeAllMenus();
+    if (selectionMode) exitSelection();
+  });
+
+  // ---------------------------------------------------------------
+  // Menus: desktop context menu vs. mobile bottom sheet
+  // ---------------------------------------------------------------
+
+  function isMobileWidth() { return window.matchMedia('(max-width: 720px)').matches; }
+
+  function menuItemsFor(paths) {
+    if (!paths.length) {
+      return [
+        { label: 'Upload files', action: function () { fileInput.click(); } },
+        { label: 'New folder', action: promptNewFolder },
+        { label: 'Refresh', action: function () { loadDir(currentPath, false); } }
+      ];
+    }
+    var items = [];
+    if (paths.length === 1) {
+      var row = rowByPath(paths[0]);
+      var isDir = row && row.dataset.isDir === '1';
+      items.push(isDir
+        ? { label: 'Open', action: function () { loadDir(paths[0]); } }
+        : { label: 'Download', action: function () { downloadPaths(paths); } });
+      items.push({ label: 'Rename', action: function () { promptRename(paths[0]); } });
+    } else {
+      items.push({ label: 'Download as .zip', action: function () { downloadPaths(paths, true); } });
+    }
+    items.push({ label: 'Delete', danger: true, action: function () { confirmDelete(paths); } });
+    return items;
+  }
+
+  function openMenuFor(x, y, paths) {
+    var items = menuItemsFor(paths);
+    if (!items.length) return;
+    if (isMobileWidth()) openSheet(items); else openCtxMenu(x, y, items);
+  }
+
+  function closeAllMenus() {
+    ctxMenu.hidden = true; ctxMenu.innerHTML = '';
+    sheet.hidden = true; sheet.innerHTML = ''; sheetOverlay.hidden = true;
+    addMenu.hidden = true; fab.setAttribute('aria-expanded', 'false');
+    closePreview();
+  }
+
+  // ---------------------------------------------------------------
+  // File preview (click on a file — never triggers a download)
+  // ---------------------------------------------------------------
+
+  var IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif', 'ico'];
+  var VIDEO_EXT = ['mp4', 'webm', 'ogv', 'mov', 'm4v', 'mkv'];
+  var AUDIO_EXT = ['mp3', 'wav', 'oga', 'ogg', 'm4a', 'flac', 'aac'];
+  var PDF_EXT = ['pdf'];
+
+  function extOf(name) {
+    var i = name.lastIndexOf('.');
+    return i === -1 ? '' : name.slice(i + 1).toLowerCase();
+  }
+
+  function urlFor(base, path) {
+    return base + path.split('/').map(encodeURIComponent).join('/');
+  }
+
+  function closePreview() {
+    previewOverlay.hidden = true;
+    previewEl.hidden = true;
+    previewEl.innerHTML = '';
+  }
+  previewOverlay.addEventListener('click', closePreview);
+
+  function openPreview(path, name) {
+    closeAllMenus();
+    var ext = extOf(name);
+    var viewUrl = urlFor(VIEW_BASE, path);
+    var dlUrl = urlFor(DOWNLOAD_BASE, path);
+    var body;
+    if (IMAGE_EXT.indexOf(ext) !== -1) {
+      body = '<img class="fe-preview__media" src="' + viewUrl + '" alt="' + escapeHtml(name) + '">';
+    } else if (VIDEO_EXT.indexOf(ext) !== -1) {
+      body = '<video class="fe-preview__media" src="' + viewUrl + '" controls autoplay playsinline></video>';
+    } else if (AUDIO_EXT.indexOf(ext) !== -1) {
+      body = '<audio class="fe-preview__audio" src="' + viewUrl + '" controls autoplay></audio>';
+    } else if (PDF_EXT.indexOf(ext) !== -1) {
+      body = '<iframe class="fe-preview__frame" src="' + viewUrl + '" title="' + escapeHtml(name) + '"></iframe>';
+    } else {
+      body = '<div class="fe-preview__none">' + FILE_ICON + '<p>No preview available for this file.</p></div>';
+    }
+    previewEl.innerHTML =
+      '<div class="fe-preview__header">' +
+        '<span class="fe-preview__name mono">' + escapeHtml(name) + '</span>' +
+        '<div class="fe-preview__actions">' +
+          '<a class="fe-icon-btn" href="' + dlUrl + '" download aria-label="Download">&#8595;</a>' +
+          '<button type="button" class="fe-icon-btn" id="fe-preview-close" aria-label="Close">&#10005;</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="fe-preview__body">' + body + '</div>';
+    previewOverlay.hidden = false;
+    previewEl.hidden = false;
+    previewEl.querySelector('#fe-preview-close').addEventListener('click', closePreview);
+  }
+
+  function openCtxMenu(x, y, items) {
+    closeAllMenus();
+    ctxMenu._items = items;
+    ctxMenu.innerHTML = items.map(function (it, i) {
+      return '<button type="button" class="fe-ctxmenu__item' + (it.danger ? ' is-danger' : '') +
+        '" data-i="' + i + '">' + escapeHtml(it.label) + '</button>';
+    }).join('');
+    ctxMenu.hidden = false;
+    var rect = ctxMenu.getBoundingClientRect();
+    var left = Math.min(x, window.innerWidth - rect.width - 8);
+    var top = Math.min(y, window.innerHeight - rect.height - 8);
+    ctxMenu.style.left = Math.max(8, left) + 'px';
+    ctxMenu.style.top = Math.max(8, top) + 'px';
+  }
+  ctxMenu.addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-i]');
+    if (!btn) return;
+    var item = ctxMenu._items[Number(btn.dataset.i)];
+    closeAllMenus();
+    if (item) item.action();
+  });
+  document.addEventListener('pointerdown', function (e) {
+    if (!ctxMenu.hidden && !e.target.closest('#fe-ctxmenu') && !e.target.closest('.fe-row__dots') && e.target !== dotsBtn) {
+      closeAllMenus();
+    }
+  });
+
+  function openSheet(items) {
+    closeAllMenus();
+    sheet._items = items;
+    sheet.innerHTML = items.map(function (it, i) {
+      return '<button type="button" class="fe-sheet__item' + (it.danger ? ' is-danger' : '') +
+        '" data-i="' + i + '">' + escapeHtml(it.label) + '</button>';
+    }).join('') + '<button type="button" class="fe-sheet__item fe-sheet__item--cancel" data-close="1">Cancel</button>';
+    sheet.hidden = false;
+    sheetOverlay.hidden = false;
+  }
+  sheet.addEventListener('click', function (e) {
+    if (e.target.dataset.close) { closeAllMenus(); return; }
+    var btn = e.target.closest('button[data-i]');
+    if (!btn) return;
+    var item = sheet._items[Number(btn.dataset.i)];
+    closeAllMenus();
+    if (item) item.action();
+  });
+  sheetOverlay.addEventListener('click', closeAllMenus);
+
+  // ---------------------------------------------------------------
+  // Add (FAB) menu
+  // ---------------------------------------------------------------
+
+  fab.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var opening = addMenu.hidden;
+    closeAllMenus();
+    if (!opening) return;
+    var r = fab.getBoundingClientRect();
+    addMenu.hidden = false;
+    fab.setAttribute('aria-expanded', 'true');
+    addMenu.style.right = (window.innerWidth - r.right) + 'px';
+    addMenu.style.bottom = (window.innerHeight - r.top + 10) + 'px';
+  });
+  document.addEventListener('click', function (e) {
+    if (!addMenu.hidden && !e.target.closest('#fe-add-menu') && e.target !== fab) closeAllMenus();
+  });
+  addMenu.addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    closeAllMenus();
+    if (btn.dataset.action === 'upload') fileInput.click();
+    if (btn.dataset.action === 'new-folder') promptNewFolder();
+  });
+
+  // ---------------------------------------------------------------
+  // File / folder actions
+  // ---------------------------------------------------------------
+
+  function downloadPaths(paths, forceZip) {
+    closeAllMenus();
+    if (!forceZip && paths.length === 1) {
+      var row = rowByPath(paths[0]);
+      if (row && row.dataset.isDir === '1') return downloadZip(paths);
+      var a = document.createElement('a');
+      a.href = DOWNLOAD_BASE + paths[0].split('/').map(encodeURIComponent).join('/');
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return;
+    }
+    downloadZip(paths);
+  }
+
+  function downloadZip(paths) {
+    fetch(ZIP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths: paths })
+    }).then(function (res) {
+      if (!res.ok) throw new Error('zip failed');
+      return res.blob();
+    }).then(function (blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'files.zip';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    }).catch(function () { alert('Download failed.'); });
+  }
+
+  function promptRename(path) {
+    var row = rowByPath(path);
+    var oldName = row ? row.dataset.name : '';
+    var name = window.prompt('Rename to:', oldName);
+    if (!name || name === oldName) return;
+    fetch(RENAME_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: path, new_name: name })
+    }).then(function (res) { return res.json(); }).then(function (data) {
+      if (data.status !== 'ok') { alert(data.message || 'Rename failed.'); return; }
+      loadDir(currentPath, false);
+    });
+  }
+
+  function promptNewFolder() {
+    var name = window.prompt('Folder name:');
+    if (!name) return;
+    fetch(MKDIR_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: currentPath, name: name })
+    }).then(function (res) { return res.json(); }).then(function (data) {
+      if (data.status !== 'ok') { alert(data.message || 'Could not create folder.'); return; }
+      loadDir(currentPath, false);
+    });
+  }
+
+  function confirmDelete(paths) {
+    var label = paths.length === 1
+      ? '"' + (rowByPath(paths[0]) ? rowByPath(paths[0]).dataset.name : paths[0]) + '"'
+      : paths.length + ' items';
+    if (!window.confirm('Delete ' + label + '? This cannot be undone.')) return;
+    fetch(DELETE_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths: paths })
+    }).then(function (res) { return res.json(); }).then(function (data) {
+      if (data.status === 'error') alert(data.message || 'Delete failed.');
+      exitSelection();
+      loadDir(currentPath, false);
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // Uploads: drag & drop + picker, with per-file progress
+  // ---------------------------------------------------------------
+
+  var uploadQueue = [];
+  var activeUploads = 0;
+  var MAX_CONCURRENT = 3;
+  var refreshTimer = null;
+
+  function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(function () { loadDir(currentPath, false); }, 350);
+  }
+
+  function queueUploads(fileList) {
+    if (!fileList.length) return;
+    uploadsPanel.hidden = false;
+    fileList.forEach(function (file) {
+      var id = 'u' + Math.random().toString(36).slice(2);
+      var row = document.createElement('div');
+      row.className = 'fe-upload-row';
+      row.dataset.id = id;
+      row.innerHTML =
+        '<span class="fe-upload-row__name">' + escapeHtml(file.name) + '</span>' +
+        '<div class="fe-upload-row__bar"><div class="fe-upload-row__fill"></div></div>' +
+        '<span class="fe-upload-row__pct mono">0%</span>';
+      uploadsPanel.appendChild(row);
+      uploadQueue.push({ file: file, id: id, targetPath: currentPath });
+    });
+    pumpQueue();
+  }
+
+  function pumpQueue() {
+    while (activeUploads < MAX_CONCURRENT && uploadQueue.length) {
+      var job = uploadQueue.shift();
+      activeUploads++;
+      uploadOne(job, function () { activeUploads--; pumpQueue(); });
+    }
+  }
+
+  function uploadOne(job, done) {
+    var row = uploadsPanel.querySelector('.fe-upload-row[data-id="' + job.id + '"]');
+    var fill = row.querySelector('.fe-upload-row__fill');
+    var pct = row.querySelector('.fe-upload-row__pct');
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', UPLOAD_URL);
+    xhr.upload.addEventListener('progress', function (e) {
+      if (e.lengthComputable) {
+        var p = Math.round((e.loaded / e.total) * 100);
+        fill.style.width = p + '%';
+        pct.textContent = p + '%';
+      }
+    });
+    xhr.onload = function () {
+      var ok = false;
+      try { ok = JSON.parse(xhr.responseText).status === 'ok'; } catch (e) {}
+      row.classList.add(ok ? 'is-done' : 'is-error');
+      pct.textContent = ok ? 'Done' : 'Failed';
+      if (ok) {
+        if (job.targetPath === currentPath) scheduleRefresh();
+        setTimeout(function () {
+          row.remove();
+          if (!uploadsPanel.children.length) uploadsPanel.hidden = true;
+        }, 1600);
+      }
+      done();
+    };
+    xhr.onerror = function () {
+      row.classList.add('is-error');
+      pct.textContent = 'Failed';
+      done();
+    };
+    var fd = new FormData();
+    fd.append('file', job.file);
+    fd.append('path', job.targetPath);
+    xhr.send(fd);
+  }
+
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files.length) queueUploads(Array.prototype.slice.call(fileInput.files));
+    fileInput.value = '';
+  });
+
+  ['dragenter', 'dragover'].forEach(function (evt) {
+    dropzone.addEventListener(evt, function (e) {
+      e.preventDefault();
+      if (Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') !== -1) {
+        dropOverlay.classList.add('is-active');
+      }
+    });
+  });
+  dropzone.addEventListener('dragleave', function (e) {
+    if (e.target === dropzone) dropOverlay.classList.remove('is-active');
+  });
+  dropzone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropOverlay.classList.remove('is-active');
+    var dropped = e.dataTransfer.files;
+    if (dropped && dropped.length) queueUploads(Array.prototype.slice.call(dropped));
+  });
+
+  // ---------------------------------------------------------------
+  // Init
+  // ---------------------------------------------------------------
+
+  var initialPath = new URLSearchParams(location.search).get('path') || '';
+  loadDir(initialPath, false);
+})();
+</script>
 {% endblock %}

@@ -42,6 +42,8 @@ def create_app():
     from app.auth.routes import auth
     from app.cross_remote.routes import cross_remote
     from app.letters.routes import letters
+    from app.network.routes import network
+    from app.management.routes import management
 
     # Register blueprints
     app.register_blueprint(portfolio)
@@ -56,6 +58,15 @@ def create_app():
     app.register_blueprint(cross_remote)
     app.register_blueprint(letters)
     app.register_blueprint(modes)
+    app.register_blueprint(network)
+    app.register_blueprint(management)
+
+    from app.network import monitor
+    monitor.start()
+
+    from app.core.presence import track_request, attach_cookie
+    app.before_request(track_request)
+    app.after_request(attach_cookie)
 
     # Lets templates conditionally show private nav links without
     # every route having to pass status flags in explicitly.

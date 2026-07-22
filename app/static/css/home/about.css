@@ -2,6 +2,241 @@
    ABOUT (redesign) — a corkboard of draggable sticky notes, plus
    a "boring version" fact table for anyone who just wants the list.
    ============================================================ */
+
+/* ---- profile panel (discord-ish: avatar + status badge, name, bio) ---- */
+#homeApp .rh-profile {
+  position: relative;
+  margin: 22px 0 30px; width: 100%;
+  background: var(--rh-mantle); border: 1px solid var(--rh-surface0);
+  border-radius: 14px; padding: 20px 22px;
+  box-sizing: border-box;
+}
+#homeApp .rh-profile__top {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "avatar .  chip"
+    "id     id id";
+  align-items: center;
+  column-gap: 14px; row-gap: 10px;
+}
+
+#homeApp .rh-profile__avatar { grid-area: avatar; position: relative; width: 68px; height: 68px; flex: none; }
+#homeApp .rh-profile__top .rh-profile__id { grid-area: id; min-width: 0; }
+
+/* ---- current-class panel — sits top-right of the profile card,
+   sourced from the schedule saved in /management#schedule. A small,
+   quiet panel — no state-based recoloring, just a consistent look
+   with a subtle hover lift. ---- */
+#homeApp .rh-class-chip {
+  grid-area: chip;
+  display: flex; align-items: center;
+  max-width: 220px; min-width: 0;
+  padding: 8px 14px;
+  background: var(--rh-surface0);
+  border: 1px solid var(--rh-surface1);
+  border-radius: 10px;
+  flex: none;
+  justify-self: end;
+  text-align: left;
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+  transition: border-color var(--rh-dur-fast) var(--rh-ease), box-shadow var(--rh-dur-fast) var(--rh-ease);
+}
+#homeApp .rh-class-chip:focus-visible {
+  outline: 2px solid var(--rh-overlay0); outline-offset: 2px;
+}
+#homeApp .rh-class-chip:hover {
+  border-color: var(--rh-overlay0);
+  box-shadow: 0 3px 10px rgba(0,0,0,.18);
+}
+
+@media (max-width: 480px) {
+  #homeApp .rh-profile__top {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "avatar"
+      "id"
+      "chip";
+  }
+  #homeApp .rh-class-chip { justify-self: stretch; max-width: 100%; padding: 9px 14px; }
+}
+#homeApp .rh-class-chip__text { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; }
+#homeApp .rh-class-chip__label {
+  font-family: var(--rh-mono); font-size: 9px; font-weight: 500;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--rh-overlay1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#homeApp .rh-class-chip__value {
+  font-family: var(--rh-mono); font-size: 12.5px; font-weight: 600; color: var(--rh-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* free period / weekend — quiet, muted, same as any other unset state */
+#homeApp .rh-class-chip[data-state="free"] .rh-class-chip__value,
+#homeApp .rh-class-chip[data-state="weekend"] .rh-class-chip__value { color: var(--rh-overlay1); }
+
+#homeApp .rh-profile__avatar-img {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
+  display: block; background: var(--rh-base); border: 1px solid var(--rh-surface0);
+}
+
+/* status badge — a fixed-size circle, cut into to make each state legible,
+   rather than three differently-sized icons */
+#homeApp .rh-profile__badge {
+  position: absolute; right: -3px; bottom: -3px; width: 21px; height: 21px;
+  background: var(--rh-mantle); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+#homeApp .rh-profile__badge svg { width: 100%; height: 100%; overflow: visible; }
+#homeApp .rh-profile__badge svg * { display: none; }
+
+#homeApp .rh-profile__badge--online .ico-online { display: block; fill: var(--rh-green); }
+
+#homeApp .rh-profile__badge--idle .ico-idle-base { display: block; fill: var(--rh-yellow); }
+#homeApp .rh-profile__badge--idle .ico-idle-cut  { display: block; fill: var(--rh-mantle); }
+
+#homeApp .rh-profile__badge--offline .ico-offline {
+  display: block; fill: var(--rh-overlay0); 
+}
+
+#homeApp .rh-profile__id { min-width: 0; display: flex; align-items: center; }
+#homeApp .rh-profile__name {
+  margin: 0; font-family: var(--rh-serif);
+  font-size: 18px !important; font-weight: 600; color: var(--rh-text);
+  padding: 2px 4px;
+}
+#homeApp .rh-profile__realname {
+  font-family: var(--rh-mono); font-size: 16px !important;
+  font-weight: 400; color: var(--rh-overlay1);
+  opacity: 0.6;
+  padding: 2px 2px;
+}
+#homeApp .panel .rh-profile__name {
+  margin: 10px 0 0 !important;
+}
+#homeApp .panel .rh-profile__realname {
+  margin: 10px 0 0 !important;
+}
+/* status shown as a thought bubble floating beside the avatar, roughly
+   level with the "evo" name — a trail of shrinking circles drifting
+   down-left from the bubble back to the pfp, the way a comic-strip
+   "thinking" cloud (or Discord's status popover) does it, rather than
+   a speech-bubble triangle */
+/* Scoped through .rh-profile (not just #homeApp) so this beats the
+   higher-specificity `#homeApp .panel p` rule in home.css, which
+   also matches this element (it's a <p>) and sets max-width: 100%,
+   silently overriding whatever was set here otherwise. */
+#homeApp .rh-profile .rh-profile__status-text {
+  position: absolute; top: 38px; left: 100px;
+  width: max-content;
+  /* JS (syncStatusBubbleWidth) measures the chip's actual left edge
+     each time its text changes and writes the result into
+     --status-max-w, since the chip's width isn't fixed (schedule text
+     varies: "free period" vs "HOLIDAY" vs a long class name). Fall
+     back to a static estimate (chip's 220px max-width + column gap
+     14px + breathing room 24px) for the instant before JS runs, or if
+     JS never runs at all. max() keeps this from ever going negative
+     (which CSS would otherwise treat as invalid and drop the
+     constraint entirely, letting the bubble grow unchecked) */
+  max-width: var(--status-max-w, max(140px, calc(100% - 100px - 258px)));
+  margin-right: 16px;
+  box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  font-family: var(--rh-mono); font-size: 12.5px; color: var(--rh-subtext0);
+  background: var(--rh-surface0); padding: 6px 13px;
+  border-radius: 14px;
+  overflow-wrap: break-word; word-break: break-word;
+  transition: box-shadow var(--rh-dur-fast) var(--rh-ease);
+}
+/* expanded state pops the bubble above the name/id text it would
+   otherwise clip into, rather than silently overlapping it */
+#homeApp .rh-profile .rh-profile__status-text.is-expanded {
+  z-index: 6; box-shadow: 0 10px 26px rgba(0,0,0,.35);
+}
+#homeApp .rh-status-content-wrap { position: relative; width: 100%; }
+#homeApp .rh-status-text-content { display: block; }
+/* fade over the last visible line while the text is clamped, using the
+   bubble's own background so it reads as a soft cutoff, not a hard edge */
+#homeApp .rh-status-fade {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 1.4em;
+  background: linear-gradient(to bottom, rgba(35,36,41,0), var(--rh-surface0) 70%);
+  pointer-events: none; opacity: 0;
+  transition: opacity var(--rh-dur-fast) var(--rh-ease);
+}
+#homeApp .rh-profile__status-text.is-clamped .rh-status-fade { opacity: 1; }
+#homeApp .rh-status-toggle {
+  align-self: flex-start; font-family: var(--rh-mono); font-size: 11px; font-weight: 600;
+  color: var(--rh-overlay1); text-decoration: underline; text-underline-offset: 2px;
+  transition: color var(--rh-dur-fast) var(--rh-ease);
+}
+#homeApp .rh-status-toggle:hover { color: var(--rh-text); }
+#homeApp .rh-profile__status-text::before,
+#homeApp .rh-profile__status-text::after {
+  content: ""; position: absolute;
+  background: var(--rh-surface0); border-radius: 50%;
+}
+/* the larger, nearer bubble — anchored from the top so it stays put
+   even as the bubble above grows taller wrapping onto more lines */
+#homeApp .rh-profile__status-text::before {
+  left: 5px; top: -3px; width: 9px; height: 9px;
+}
+/* the smaller bubble, drifting further down toward the avatar */
+#homeApp .rh-profile__status-text::after {
+  left: -5px; top: -6px; width: 4.5px; height: 4.5px;
+}
+
+@media (max-width: 480px) {
+  #homeApp .rh-profile .rh-profile__status-text {
+    max-width: max(100px, calc(100% - 100px - 12px));
+    margin-right: 0;
+  }
+}
+
+/* ---- schedule popup (opened from the "current class" chip) — a
+   read-only view of the same schedule saved in /management#schedule,
+   reusing the site's existing bottom-sheet .rh-modal shell. ---- */
+#homeApp .rh-modal--schedule { max-width: 720px; }
+#homeApp .rh-schedule-banner {
+  margin: 0 0 18px; padding: 10px 14px; border-radius: 8px;
+  background: var(--rh-surface0); border: 1px solid var(--rh-surface1);
+  font-family: var(--rh-mono); font-size: 13px; color: var(--rh-subtext0);
+}
+#homeApp .rh-schedule-scroll {
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--rh-surface0); border-radius: 10px;
+  background: var(--rh-mantle);
+}
+#homeApp .rh-schedule-table { border-collapse: collapse; width: 100%; min-width: 560px; }
+#homeApp .rh-schedule-table th {
+  position: sticky; top: 0; background: var(--rh-crust); color: var(--rh-overlay1);
+  font-family: var(--rh-mono); font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .08em; text-align: left; white-space: nowrap; padding: 10px 12px;
+  border-bottom: 1px solid var(--rh-surface0);
+}
+#homeApp .rh-schedule-table th.rh-schedule-table__time { text-align: center; width: 90px; }
+#homeApp .rh-schedule-table th[data-today="true"] { color: var(--rh-mauve); }
+#homeApp .rh-schedule-table td {
+  padding: 10px 12px; border-bottom: 1px solid var(--rh-surface0); border-left: 1px solid var(--rh-surface0);
+  font-family: var(--rh-mono); font-size: 12.5px; color: var(--rh-subtext0); white-space: nowrap;
+}
+#homeApp .rh-schedule-table td:first-child { border-left: none; text-align: center; color: var(--rh-overlay1); }
+#homeApp .rh-schedule-table tbody tr:last-child td { border-bottom: none; }
+#homeApp .rh-schedule-table tbody tr.is-now td { background: rgba(165, 152, 255, .1); }
+#homeApp .rh-schedule-table td.is-free { color: var(--rh-overlay0); font-style: italic; }
+@media (max-width: 480px) {
+  #homeApp .rh-schedule-table { min-width: 460px; }
+}
+
+#homeApp .rh-profile__divider { height: 1px; background: var(--rh-surface0); margin: 16px 0; }
+
+#homeApp .rh-profile__bio-label {
+  margin: 0 0 6px; font-family: var(--rh-mono); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--rh-overlay1);
+}
+#homeApp .rh-profile__bio-text {
+  margin: 0; font-family: var(--rh-mono); font-size: 13.5px; line-height: 1.55;
+  color: var(--rh-subtext0);
+}
 #homeApp .rh-board {
   position: relative; margin-top: 28px; min-height: clamp(400px, 50vw, 480px);
   border-radius: 12px;

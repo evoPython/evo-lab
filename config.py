@@ -34,3 +34,9 @@ class Config:
     MAX_CONTENT_LENGTH = int(
         os.getenv("EVO_MAX_UPLOAD_MB", "200")
     ) * 1024 * 1024
+
+    # Where downloaded mp3s (music tool) live on disk.
+    MUSIC_DIR = os.getenv(
+        "EVO_MUSIC_DIR",
+        os.path.join(BASE_DIR, "data", "music")
+    )

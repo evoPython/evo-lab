@@ -30,10 +30,12 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app/page-shell.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app/auth.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app/tools.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/file-explorer.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app/dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app/remote-dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app/cross-remote.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app/inbox.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app/management.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app/clipboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app/music-tool.css') }}">
 </head>
@@ -53,8 +55,8 @@
       <a href="/dashboard" class="app-sidebar__item {% if request.path.startswith('/dashboard') %}app-sidebar__item--active{% endif %}">Dashboard</a>
       <a href="/remote" class="app-sidebar__item {% if request.path.startswith('/remote') %}app-sidebar__item--active{% endif %}">Remote</a>
       <a href="/tools" class="app-sidebar__item {% if request.path.startswith('/tools') %}app-sidebar__item--active{% endif %}">Tools</a>
-      <a href="/letters/inbox" class="app-sidebar__item {% if request.path.startswith('/letters') %}app-sidebar__item--active{% endif %}">
-        Inbox{% if unread_letters %}<span class="app-sidebar__badge">{{ unread_letters }}</span>{% endif %}
+      <a href="/management" class="app-sidebar__item {% if request.path.startswith('/management') %}app-sidebar__item--active{% endif %}">
+        Site Management{% if unread_letters %}<span class="app-sidebar__badge">{{ unread_letters }}</span>{% endif %}
       </a>
       <a href="/pisayconnect" class="app-sidebar__item {% if request.path.startswith('/pisayconnect') %}app-sidebar__item--active{% endif %}">PisayConnect</a>
       {% endif %}

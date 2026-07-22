@@ -1,9 +1,8 @@
 import uuid
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for
+from flask import Blueprint, request, jsonify
 
 from app.core.db import get_db
-from app.core.security import require_personal_device
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -164,33 +163,6 @@ def letter_count():
         _set_visitor_cookie(resp, visitor_id)
     return resp
 
-
-@letters.route("/inbox")
-@require_personal_device
-def inbox():
-    db = get_db()
-    rows = db.execute(
-        "SELECT l.id, l.name, l.body, l.ip, l.visitor_id, l.created_at, l.read, "
-        "       v.letters_sent AS visitor_letters_sent, v.first_seen AS visitor_first_seen, "
-        "       v.user_agent AS visitor_user_agent, v.platform AS visitor_platform, "
-        "       v.language AS visitor_language, v.screen AS visitor_screen, "
-        "       v.timezone AS visitor_timezone "
-        "FROM letters l "
-        "LEFT JOIN visitors v ON v.id = l.visitor_id "
-        "ORDER BY l.id DESC"
-    ).fetchall()
-
-    # Viewing the inbox is what "reads" the letters, for badge purposes.
-    db.execute("UPDATE letters SET read = 1 WHERE read = 0")
-    db.commit()
-
-    return render_template("inbox.html", letters=rows)
-
-
-@letters.route("/<int:letter_id>/delete", methods=["POST"])
-@require_personal_device
-def delete_letter(letter_id):
-    db = get_db()
-    db.execute("DELETE FROM letters WHERE id = ?", (letter_id,))
-    db.commit()
-    return redirect(url_for("letters.inbox"))
+# Inbox viewing + letter deletion now live under Site Management
+# (see app/management/routes.py) since they're root-only pages, not
+# part of the public letter-sending API.
