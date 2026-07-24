@@ -68,6 +68,11 @@ def create_app():
     app.before_request(track_request)
     app.after_request(attach_cookie)
 
+    from app.core.logging import start_timer, log_request, log_exception
+    app.before_request(start_timer)
+    app.after_request(log_request)
+    app.teardown_request(log_exception)
+
     # Lets templates conditionally show private nav links without
     # every route having to pass status flags in explicitly.
     @app.context_processor

@@ -138,8 +138,24 @@ def api_upload_file():
     if upload is None or not upload.filename:
         return jsonify({"status": "error", "message": "No file selected."}), 400
 
+    # Large files are sent in chunks (see files.html) so a single POST
+    # never has to carry the whole thing — some LAN paths silently drop
+    # or reset big single-request uploads. Presence of these three
+    # fields is what marks a request as one chunk of a larger upload.
+    upload_id = request.form.get("uploadId")
+    chunk_index = request.form.get("chunkIndex")
+    total_chunks = request.form.get("totalChunks")
+
     try:
-        saved = files.save_upload(upload, path)
+        if upload_id is not None and chunk_index is not None and total_chunks is not None:
+            saved = files.save_chunk(
+                upload_id, chunk_index, total_chunks, upload.filename, path, upload
+            )
+            if saved is None:
+                # More chunks still expected — this one landed fine.
+                return jsonify({"status": "chunk-ok"})
+        else:
+            saved = files.save_upload(upload, path)
     except (ValueError, files.PathError, FileNotFoundError) as exc:
         return _path_error_response(exc)
 
@@ -193,6 +209,33 @@ def api_move():
         notify("Remote", f"Moved {moved} item(s)")
 
     if errors and not moved:
+        return jsonify({"status": "error", "errors": errors, "message": errors[0]["message"]}), 400
+    if errors:
+        return jsonify({"status": "partial", "errors": errors}), 207
+
+    return jsonify({"status": "ok"})
+
+
+@tools.route("/files/api/copy", methods=["POST"])
+@require_personal_device
+def api_copy():
+    data = request.get_json(silent=True) or {}
+    paths = data.get("paths") or []
+    dest = data.get("dest", "")
+
+    errors = []
+    copied = 0
+    for p in paths:
+        try:
+            files.copy_entry(p, dest)
+            copied += 1
+        except (ValueError, files.PathError, FileNotFoundError) as exc:
+            errors.append({"path": p, "message": str(exc)})
+
+    if copied:
+        notify("Remote", f"Copied {copied} item(s)")
+
+    if errors and not copied:
         return jsonify({"status": "error", "errors": errors, "message": errors[0]["message"]}), 400
     if errors:
         return jsonify({"status": "partial", "errors": errors}), 207

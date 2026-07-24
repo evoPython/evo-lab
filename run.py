@@ -1,5 +1,5 @@
+from waitress import serve
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
-from werkzeug.serving import run_simple
 
 from app import create_app
 from pisayconnect_mount import load_pisayconnect_app
@@ -19,9 +19,18 @@ application = DispatcherMiddleware(app, {
 
 if __name__ == "__main__":
 
-    run_simple(
-        "0.0.0.0",
-        5000,
+    # Werkzeug's dev server (run_simple) is a bare-bones HTTP/1.1
+    # implementation — fine when every request comes in already
+    # normalized by a proxy (e.g. the Tailscale path), but it doesn't
+    # reliably handle the raw HTTP/1.1 behavior of real mobile browsers
+    # talking to it directly over LAN (keep-alive reuse, slow/flaky
+    # WiFi writes, `Expect: 100-continue`, etc.) — uploads in
+    # particular would hang mid-request and never complete. Waitress is
+    # a small, pure-Python, production-grade WSGI server that handles
+    # all of that correctly, with no other code changes required.
+    serve(
         application,
-        threaded=True,
+        host="0.0.0.0",
+        port=5000,
+        threads=32,
     )

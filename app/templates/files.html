@@ -30,6 +30,7 @@
 <div class="fe-popover" id="fe-add-menu" hidden>
   <button type="button" data-action="upload">Upload files</button>
   <button type="button" data-action="new-folder">New folder</button>
+  <button type="button" data-action="refresh">Refresh</button>
 </div>
 
 <div class="fe-ctxmenu" id="fe-ctxmenu" hidden></div>
@@ -38,6 +39,14 @@
 <div class="fe-sheet" id="fe-sheet" hidden></div>
 
 <div class="fe-uploads" id="fe-uploads" hidden></div>
+
+<div class="fe-picker-bar" id="fe-picker-bar" hidden>
+  <span class="fe-picker-bar__label" id="fe-picker-label"></span>
+  <div class="fe-picker-bar__actions">
+    <button type="button" class="btn btn--ghost" id="fe-picker-cancel">Cancel</button>
+    <button type="button" class="btn btn--primary" id="fe-picker-confirm"></button>
+  </div>
+</div>
 
 <div class="fe-preview-overlay" id="fe-preview-overlay" hidden></div>
 <div class="fe-preview" id="fe-preview" hidden></div>
@@ -50,6 +59,7 @@
   var RENAME_URL = '/tools/files/api/rename';
   var DELETE_URL = '/tools/files/api/delete';
   var MOVE_URL = '/tools/files/api/move';
+  var COPY_URL = '/tools/files/api/copy';
   var ZIP_URL = '/tools/files/api/download-zip';
   var DOWNLOAD_BASE = '/tools/files/download/';
   var VIEW_BASE = '/tools/files/view/';
@@ -72,11 +82,16 @@
   var uploadsPanel = document.getElementById('fe-uploads');
   var previewOverlay = document.getElementById('fe-preview-overlay');
   var previewEl = document.getElementById('fe-preview');
+  var pickerBar = document.getElementById('fe-picker-bar');
+  var pickerLabel = document.getElementById('fe-picker-label');
+  var pickerCancelBtn = document.getElementById('fe-picker-cancel');
+  var pickerConfirmBtn = document.getElementById('fe-picker-confirm');
 
   var currentPath = '';
   var selected = {};       // path -> true
   var selectedCount = 0;
   var selectionMode = false;
+  var pickerOp = null;     // { type: 'move'|'copy', paths: [...] } while choosing a destination
 
   var FOLDER_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.9c.46 0 .9.18 1.23.5l1.24 1.24c.33.32.77.5 1.23.5H19.5A1.5 1.5 0 0 1 21 8.74V17.5A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5v-11Z"/></svg>';
   var FILE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 2.75A1.75 1.75 0 0 0 4.25 4.5v15A1.75 1.75 0 0 0 6 21.25h12A1.75 1.75 0 0 0 19.75 19.5V9.06a1.75 1.75 0 0 0-.51-1.24l-5.31-5.3a1.75 1.75 0 0 0-1.24-.52H6Z"/><path d="M13 2.9V7.5c0 .97.78 1.75 1.75 1.75h4.6"/></svg>';
@@ -249,130 +264,47 @@
   var pressStart = null;
   var longPressFired = false;
   var lastPointerType = 'mouse';
-  var touchArmedPath = null;
-  var touchDrag = null; // { ghost, target }
-  var TOUCH_DRAG_THRESHOLD = 14;
-
-  function makeTouchGhost(paths) {
-    var ghost = document.createElement('div');
-    ghost.className = 'fe-touch-ghost';
-    var label = paths.length === 1
-      ? (rowByPath(paths[0]) ? rowByPath(paths[0]).dataset.name : paths[0])
-      : paths.length + ' items';
-    ghost.innerHTML = '<span class="fe-touch-ghost__icon">' + FILE_ICON + '</span>' +
-      '<span class="fe-touch-ghost__label"></span>';
-    ghost.querySelector('.fe-touch-ghost__label').textContent = label;
-    document.body.appendChild(ghost);
-    return ghost;
-  }
-
-  function touchDropTargetAt(x, y) {
-    var el = document.elementFromPoint(x, y);
-    if (!el) return null;
-    var row = el.closest && el.closest('.fe-row[data-is-dir="1"]');
-    if (row && !(dragPaths && dragPaths.indexOf(row.dataset.path) !== -1)) {
-      return { el: row, path: row.dataset.path };
-    }
-    var crumb = el.closest && el.closest('.fe-crumb');
-    if (crumb) return { el: crumb, path: crumb.dataset.path };
-    return null;
-  }
-
-  function startTouchDrag(row, x, y) {
-    var paths = (selected[row.dataset.path] && selectedCount > 1) ? selectedPaths() : [row.dataset.path];
-    dragPaths = paths;
-    touchDrag = { ghost: makeTouchGhost(paths), target: null };
-    touchDrag.ghost.style.left = x + 'px';
-    touchDrag.ghost.style.top = y + 'px';
-    if (navigator.vibrate) navigator.vibrate(8);
-  }
-
-  function updateTouchDrag(x, y) {
-    if (!touchDrag) return;
-    touchDrag.ghost.style.left = x + 'px';
-    touchDrag.ghost.style.top = y + 'px';
-    var hit = touchDropTargetAt(x, y);
-    if (touchDrag.target && (!hit || touchDrag.target.el !== hit.el)) {
-      touchDrag.target.el.classList.remove('is-drop-target');
-      touchDrag.target = null;
-    }
-    if (hit && !touchDrag.target) {
-      clearDropTargets();
-      hit.el.classList.add('is-drop-target');
-      touchDrag.target = hit;
-    }
-  }
-
-  function endTouchDrag() {
-    if (!touchDrag) return;
-    var target = touchDrag.target;
-    var paths = dragPaths;
-    touchDrag.ghost.remove();
-    clearDropTargets();
-    touchDrag = null;
-    dragPaths = null;
-    if (target && paths && paths.length) movePaths(paths, target.path);
-    exitSelection();
-  }
-
-  function clearTouchArm() {
-    if (touchArmedPath) {
-      var armedRow = rowByPath(touchArmedPath);
-      if (armedRow) armedRow.classList.remove('is-armed');
-    }
-    touchArmedPath = null;
-  }
 
   grid.addEventListener('pointerdown', function (e) {
     var row = e.target.closest('.fe-row');
     if (!row) return;
     longPressFired = false;
-    clearTouchArm();
     lastPointerType = e.pointerType;
     pressStart = { x: e.clientX, y: e.clientY };
-    if (e.pointerType !== 'mouse') {
+    if (e.pointerType !== 'mouse' && !pickerOp) {
       pressTimer = setTimeout(function () {
         longPressFired = true;
-        touchArmedPath = row.dataset.path;
-        row.classList.add('is-armed');
         if (navigator.vibrate) navigator.vibrate(12);
         enterSelection(row.dataset.path);
       }, 500);
     }
   });
   grid.addEventListener('pointermove', function (e) {
-    if (!pressStart) return;
+    if (!pressStart || !pressTimer) return;
     var dist = Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y);
-
-    if (pressTimer) {
-      // Still waiting to arm — a real move here means "scroll", not "select".
-      if (dist > 10) { clearTimeout(pressTimer); pressTimer = null; }
-      return;
-    }
-
-    if (touchArmedPath && !touchDrag && dist > TOUCH_DRAG_THRESHOLD) {
-      // Armed via long-press, then the finger kept moving — that's a drag.
-      startTouchDrag(rowByPath(touchArmedPath), e.clientX, e.clientY);
-    }
-    if (touchDrag) {
-      e.preventDefault();
-      updateTouchDrag(e.clientX, e.clientY);
-    }
-  }, { passive: false });
+    // A real move here means "scroll", not "select" — cancel the arm timer.
+    if (dist > 10) { clearTimeout(pressTimer); pressTimer = null; }
+  });
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evt) {
     grid.addEventListener(evt, function () {
       if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-      if (touchDrag) endTouchDrag();
-      clearTouchArm();
     });
   });
 
   grid.addEventListener('click', function (e) {
     if (longPressFired) { longPressFired = false; return; }
 
-    var dotsEl = e.target.closest('.fe-row__dots');
     var row = e.target.closest('.fe-row');
     if (!row) return;
+
+    if (pickerOp) {
+      // While picking a destination, rows only navigate folders —
+      // no selection, dots menu, or preview.
+      if (row.dataset.isDir === '1') loadDir(row.dataset.path);
+      return;
+    }
+
+    var dotsEl = e.target.closest('.fe-row__dots');
 
     if (dotsEl) {
       if (!selected[row.dataset.path]) enterSelection(row.dataset.path);
@@ -395,6 +327,12 @@
 
   grid.addEventListener('contextmenu', function (e) {
     e.preventDefault();
+    // On touch devices, a long-press fires a native "contextmenu" event
+    // too. That gesture is already handled by the pointerdown/pointermove
+    // long-press logic above — so here we just swallow the event to stop
+    // the OS's own menu/callout, and leave opening our sheet to the
+    // explicit "..." button.
+    if (lastPointerType !== 'mouse' || pickerOp) return;
     var row = e.target.closest('.fe-row');
     if (!row) { openMenuFor(e.clientX, e.clientY, []); return; }
     if (!selected[row.dataset.path]) enterSelection(row.dataset.path);
@@ -436,6 +374,49 @@
       loadDir(currentPath, false);
     }).catch(function () { alert('Move failed.'); });
   }
+
+  function copyPaths(paths, destPath) {
+    fetch(COPY_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths: paths, dest: destPath })
+    }).then(function (res) { return res.json(); }).then(function (data) {
+      if (data.status === 'error') alert(data.message || 'Copy failed.');
+      exitSelection();
+      loadDir(currentPath, false);
+    }).catch(function () { alert('Copy failed.'); });
+  }
+
+  // ---------------------------------------------------------------
+  // Move to... / Copy to...: pick a destination by navigating, then
+  // confirm with a button — the touch-friendly replacement for drag.
+  // ---------------------------------------------------------------
+
+  function enterPicker(type, paths) {
+    closeAllMenus();
+    exitSelection();
+    pickerOp = { type: type, paths: paths };
+    var count = paths.length;
+    var noun = count === 1 ? '1 item' : count + ' items';
+    pickerLabel.textContent = (type === 'move' ? 'Moving ' : 'Copying ') + noun + '\u2026';
+    pickerConfirmBtn.textContent = type === 'move' ? 'Move here' : 'Copy here';
+    pickerBar.hidden = false;
+    fab.classList.add('is-hidden');
+  }
+
+  function exitPicker() {
+    pickerOp = null;
+    pickerBar.hidden = true;
+    fab.classList.remove('is-hidden');
+  }
+
+  pickerCancelBtn.addEventListener('click', exitPicker);
+  pickerConfirmBtn.addEventListener('click', function () {
+    if (!pickerOp) return;
+    var op = pickerOp;
+    exitPicker();
+    if (op.type === 'move') movePaths(op.paths, currentPath);
+    else copyPaths(op.paths, currentPath);
+  });
 
   grid.addEventListener('dragstart', function (e) {
     var row = e.target.closest('.fe-row');
@@ -527,6 +508,7 @@
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
     if (!previewEl.hidden) { closePreview(); return; }
+    if (pickerOp) { exitPicker(); return; }
     closeAllMenus();
     if (selectionMode) exitSelection();
   });
@@ -556,6 +538,8 @@
     } else {
       items.push({ label: 'Download as .zip', action: function () { downloadPaths(paths, true); } });
     }
+    items.push({ label: 'Move to\u2026', action: function () { enterPicker('move', paths); } });
+    items.push({ label: 'Copy to\u2026', action: function () { enterPicker('copy', paths); } });
     items.push({ label: 'Delete', danger: true, action: function () { confirmDelete(paths); } });
     return items;
   }
@@ -613,7 +597,10 @@
     } else if (PDF_EXT.indexOf(ext) !== -1) {
       body = '<iframe class="fe-preview__frame" src="' + viewUrl + '" title="' + escapeHtml(name) + '"></iframe>';
     } else {
-      body = '<div class="fe-preview__none">' + FILE_ICON + '<p>No preview available for this file.</p></div>';
+      body = '<div class="fe-preview__none">' + FILE_ICON +
+        '<p>No preview available for this file.</p>' +
+        '<button type="button" class="btn btn--ghost" id="fe-preview-astext">View as text</button>' +
+        '</div>';
     }
     previewEl.innerHTML =
       '<div class="fe-preview__header">' +
@@ -627,6 +614,44 @@
     previewOverlay.hidden = false;
     previewEl.hidden = false;
     previewEl.querySelector('#fe-preview-close').addEventListener('click', closePreview);
+
+    var textBtn = previewEl.querySelector('#fe-preview-astext');
+    if (textBtn) {
+      textBtn.addEventListener('click', function () { loadAsText(viewUrl); });
+    }
+  }
+
+  var TEXT_PREVIEW_LIMIT = 500 * 1024; // 500 KB — plenty for source/config/log files
+
+  function loadAsText(viewUrl) {
+    var bodyEl = previewEl.querySelector('.fe-preview__body');
+    bodyEl.innerHTML = '<div class="fe-preview__none"><p>Loading&hellip;</p></div>';
+    fetch(viewUrl)
+      .then(function (res) {
+        if (!res.ok) throw new Error('fetch failed');
+        var len = Number(res.headers.get('Content-Length'));
+        if (len && len > TEXT_PREVIEW_LIMIT) {
+          throw new Error('too large');
+        }
+        return res.text();
+      })
+      .then(function (text) {
+        // Heuristic: if it looks like binary junk rather than text,
+        // say so instead of dumping garbage on screen.
+        if (/[\x00-\x08\x0E-\x1F]/.test(text.slice(0, 2000))) {
+          bodyEl.innerHTML = '<div class="fe-preview__none">' + FILE_ICON +
+            '<p>This file doesn&rsquo;t look like plain text.</p></div>';
+          return;
+        }
+        bodyEl.innerHTML = '<pre class="fe-preview__text"></pre>';
+        bodyEl.querySelector('.fe-preview__text').textContent = text;
+      })
+      .catch(function (err) {
+        var msg = err && err.message === 'too large'
+          ? 'File is too large to preview as text — download it instead.'
+          : 'Could not load file as text.';
+        bodyEl.innerHTML = '<div class="fe-preview__none">' + FILE_ICON + '<p>' + msg + '</p></div>';
+      });
   }
 
   function openCtxMenu(x, y, items) {
@@ -700,6 +725,7 @@
     closeAllMenus();
     if (btn.dataset.action === 'upload') fileInput.click();
     if (btn.dataset.action === 'new-folder') promptNewFolder();
+    if (btn.dataset.action === 'refresh') loadDir(currentPath, false);
   });
 
   // ---------------------------------------------------------------
@@ -815,14 +841,57 @@
     while (activeUploads < MAX_CONCURRENT && uploadQueue.length) {
       var job = uploadQueue.shift();
       activeUploads++;
-      uploadOne(job, function () { activeUploads--; pumpQueue(); });
+      uploadOne(job, function () {
+        activeUploads--;
+        pumpQueue();
+        // Safety net: once the whole batch has settled, force a fresh
+        // reload of the current folder regardless of any earlier
+        // per-file refresh — covers cases where a request got dropped
+        // (flaky connection, backgrounded tab during the OS file
+        // picker, etc.) and the list silently went stale.
+        if (activeUploads === 0 && !uploadQueue.length) {
+          loadDir(currentPath, false);
+        }
+      });
     }
+  }
+
+  // Large single requests are what fail on some LAN paths (router/AP
+  // chokes on a sustained big transfer even though the same file goes
+  // fine over a tunnel). Splitting anything bigger than this into
+  // small pieces keeps every individual request small, regardless of
+  // the underlying cause. Small files go out exactly as before.
+  var CHUNK_SIZE = 512 * 1024; // 512KB — you confirmed ~500KB succeeds (just slow), so staying at that proven-safe size
+  var CHUNK_MAX_RETRIES = 2;
+
+  function markDone(row, pct, job) {
+    row.classList.add('is-done');
+    pct.textContent = 'Done';
+    if (job.targetPath === currentPath) scheduleRefresh();
+    setTimeout(function () {
+      row.remove();
+      if (!uploadsPanel.children.length) uploadsPanel.hidden = true;
+    }, 1600);
+  }
+
+  function markFailed(row, pct) {
+    row.classList.add('is-error');
+    pct.textContent = 'Failed';
   }
 
   function uploadOne(job, done) {
     var row = uploadsPanel.querySelector('.fe-upload-row[data-id="' + job.id + '"]');
     var fill = row.querySelector('.fe-upload-row__fill');
     var pct = row.querySelector('.fe-upload-row__pct');
+
+    if (job.file.size <= CHUNK_SIZE) {
+      uploadWhole(job, row, fill, pct, done);
+    } else {
+      uploadChunked(job, row, fill, pct, done);
+    }
+  }
+
+  function uploadWhole(job, row, fill, pct, done) {
     var xhr = new XMLHttpRequest();
     xhr.open('POST', UPLOAD_URL);
     xhr.upload.addEventListener('progress', function (e) {
@@ -835,26 +904,113 @@
     xhr.onload = function () {
       var ok = false;
       try { ok = JSON.parse(xhr.responseText).status === 'ok'; } catch (e) {}
-      row.classList.add(ok ? 'is-done' : 'is-error');
-      pct.textContent = ok ? 'Done' : 'Failed';
-      if (ok) {
-        if (job.targetPath === currentPath) scheduleRefresh();
-        setTimeout(function () {
-          row.remove();
-          if (!uploadsPanel.children.length) uploadsPanel.hidden = true;
-        }, 1600);
-      }
+      if (ok) markDone(row, pct, job); else markFailed(row, pct);
       done();
     };
     xhr.onerror = function () {
-      row.classList.add('is-error');
-      pct.textContent = 'Failed';
+      markFailed(row, pct);
       done();
     };
     var fd = new FormData();
     fd.append('file', job.file);
     fd.append('path', job.targetPath);
     xhr.send(fd);
+  }
+
+  var CHUNK_CONCURRENCY = 8; // parallel in-flight chunk requests per file
+
+  function uploadChunked(job, row, fill, pct, done) {
+    var file = job.file;
+    var totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    var uploadId = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+    var nextIndex = 0;
+    var inFlight = 0;
+    var ackedCount = 0;
+    var sentBytes = 0;
+    var settled = false; // true once we've called done() for this job
+
+    function updateProgress() {
+      var p = Math.min(99, Math.round((sentBytes / file.size) * 100));
+      fill.style.width = p + '%';
+      pct.textContent = p + '%';
+    }
+
+    function finishSuccess() {
+      if (settled) return;
+      settled = true;
+      markDone(row, pct, job);
+      done();
+    }
+
+    function finishFailure() {
+      if (settled) return;
+      settled = true;
+      markFailed(row, pct);
+      done();
+    }
+
+    function dispatchNext() {
+      while (!settled && inFlight < CHUNK_CONCURRENCY && nextIndex < totalChunks) {
+        sendChunk(nextIndex, CHUNK_MAX_RETRIES);
+        nextIndex++;
+        inFlight++;
+      }
+    }
+
+    function sendChunk(index, retriesLeft) {
+      if (settled) return;
+      var start = index * CHUNK_SIZE;
+      var end = Math.min(start + CHUNK_SIZE, file.size);
+      var blob = file.slice(start, end);
+      var chunkBytes = end - start;
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', UPLOAD_URL);
+      xhr.onload = function () {
+        if (settled) return;
+        var resp = null;
+        try { resp = JSON.parse(xhr.responseText); } catch (e) {}
+        var status = resp && resp.status;
+        if (status !== 'ok' && status !== 'chunk-ok') {
+          retryOrFail(index, retriesLeft);
+          return;
+        }
+        inFlight--;
+        sentBytes += chunkBytes;
+        ackedCount++;
+        updateProgress();
+        // Every chunk request succeeding is proof the file is fully
+        // assembled server-side (whichever one happened to land last
+        // there gets 'ok'; the others just get 'chunk-ok') — so we
+        // don't need to wait specifically for an 'ok' response.
+        if (ackedCount === totalChunks) {
+          finishSuccess();
+        } else {
+          dispatchNext();
+        }
+      };
+      xhr.onerror = function () { retryOrFail(index, retriesLeft); };
+
+      function retryOrFail(idx, left) {
+        if (settled) return;
+        if (left > 0) {
+          setTimeout(function () { sendChunk(idx, left - 1); }, 400);
+        } else {
+          finishFailure();
+        }
+      }
+
+      var fd = new FormData();
+      fd.append('file', blob, file.name);
+      fd.append('path', job.targetPath);
+      fd.append('uploadId', uploadId);
+      fd.append('chunkIndex', String(index));
+      fd.append('totalChunks', String(totalChunks));
+      xhr.send(fd);
+    }
+
+    dispatchNext();
   }
 
   fileInput.addEventListener('change', function () {

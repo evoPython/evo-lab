@@ -431,7 +431,7 @@
       }
 
       const isEmpty = !current || ['blank', 'none'].includes(current.trim().toLowerCase());
-      setChip(isEmpty ? 'free' : 'class', isEmpty ? 'free period' : current);
+      setChip(isEmpty ? 'free' : 'class', isEmpty ? 'None' : current);
     }
 
     update();

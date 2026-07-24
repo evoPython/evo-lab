@@ -1,6 +1,7 @@
 flask
 psutil
 werkzeug
+waitress
 python-dotenv
 pyperclip
 pyxdg
